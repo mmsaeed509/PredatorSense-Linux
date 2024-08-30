@@ -8,6 +8,7 @@ class InternalWindow(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         # Set the geometry (position and size) of the internal window
+        # self.setGeometry(x, y, width, height)
         self.setGeometry(300, 100, 1100, 600)
         self.setAttribute(Qt.WA_TranslucentBackground)  # Make the background transparent
         self.polygon = self.createCustomMask()  # Store the polygon used for the mask
@@ -21,10 +22,10 @@ class InternalWindow(QWidget):
             QPoint(1080, 600), # Bottom right, 4
             QPoint(20, 600),   # Bottom center, 5
             QPoint(0, 580),    # Bottom left, 6
-            QPoint(0, 560),     # Middle left, 7
-            QPoint(20, 540),      # Top left, 8
-            QPoint(20, 60),   # Bottom center, 9
-            QPoint(0, 40),    # Bottom left, 10
+            QPoint(0, 560),    # Middle left, 7
+            QPoint(20, 540),   # Top left, 8
+            QPoint(20, 60),    # Bottom center, 9
+            QPoint(0, 40),     # Bottom left, 10
             QPoint(0, 20),     # Middle left, 11
             QPoint(20, 0)      # Top left, 12
         ]
