@@ -2,12 +2,21 @@ import os
 from PyQt5.QtCore import Qt, QPoint, QRect
 from PyQt5.QtGui import QPainter, QBrush, QPolygon, QColor, QRegion, QFont, QFontDatabase, QPixmap, QPainterPath, \
     QLinearGradient, QPen
-from PyQt5.QtWidgets import QMainWindow, QPushButton, QWidget, QApplication, QVBoxLayout, QButtonGroup
+from PyQt5.QtWidgets import (
+    QMainWindow,
+    QPushButton,
+    QWidget,
+    QApplication,
+    QVBoxLayout,
+    QButtonGroup,
+)
 from app.ui.internal_window import InternalWindow
 from app.utils import ui_utils
 from config import WM_CLASS, WM_CLASS_2, FONTS_DIR, ICONS_DIR, DEFAULT_FONT_FAMILY
 from app.utils import x11_utils
 from app.core import CoreController, Tab
+from app.core.models import TemperatureUnit
+from app.ui.settings_popup import SettingsPopup
 
 def createMask():
     # Define a polygon to set the window shape
@@ -28,9 +37,7 @@ def createMask():
     polygon = QPolygon(points)
     return QRegion(polygon)
 
-
-def openSettings():
-    print("Settings button clicked.")  # Placeholder for settings functionality
+ 
 
 
 class CustomShapeWindow(QMainWindow):
@@ -41,6 +48,7 @@ class CustomShapeWindow(QMainWindow):
         self.close_button = None
         self.settings_button = None
         self.minimize_button = None
+        self.settings_popup = None
         self.sidebar = None
         self.menu_group = None
         self.menu_buttons = {}
@@ -79,6 +87,23 @@ class CustomShapeWindow(QMainWindow):
 
         # Sidebar menu
         self.createSidebar()
+
+        # Settings popup
+        try:
+            family = None
+            if self.button_font:
+                family = self.button_font.family()
+            self.settings_popup = SettingsPopup(self, font_family=family)
+            # Wire radios -> controller
+            if self.settings_popup:
+                self.settings_popup.r_c.toggled.connect(self._onCelsiusToggled)
+                self.settings_popup.r_f.toggled.connect(self._onFahrenheitToggled)
+                # Controller -> radios (sync)
+                self.controller.temperatureUnitChanged.connect(self.settings_popup.setUnit)
+                # Initial sync
+                self.settings_popup.setUnit(self.controller.temperature_unit)
+        except Exception as e:
+            print(f"Failed to create settings popup: {e}")
 
     # Set the WM_CLASS property with instance and class names
     def set_wm_class(self):
@@ -141,7 +166,7 @@ class CustomShapeWindow(QMainWindow):
         # Create the buttons
         self.settings_button = QPushButton('⚙', button_widget)
         self.settings_button.setGeometry(0, 0, 40, 40)
-        self.settings_button.clicked.connect(openSettings)
+        self.settings_button.clicked.connect(self.toggleSettingsPopup)
         self.settings_button.setFont(self.button_font)  # Set button font
 
         self.minimize_button = QPushButton('—', button_widget)
@@ -158,6 +183,38 @@ class CustomShapeWindow(QMainWindow):
         for button in [self.settings_button, self.minimize_button, self.close_button]:
             button.setStyleSheet("color: #acacac; border: none; font-size: 25px;")
             button.setFixedSize(40, 40)
+
+        # Save button widget for geometry reference
+        self._button_widget = button_widget
+
+    def toggleSettingsPopup(self):
+        if not self.settings_popup:
+            return
+        if self.settings_popup.isVisible():
+            self.settings_popup.hide()
+            return
+        # Position under the gear button, centered like the screenshot
+        try:
+            btn_center = self.settings_button.mapToGlobal(self.settings_button.rect().center())
+            self.settings_popup.showAt(btn_center)
+        except Exception:
+            # Fallback: show near top-right
+            top_right = self.mapToGlobal(QPoint(self.width() - 140, 40))
+            self.settings_popup.showAt(top_right)
+
+    def _onCelsiusToggled(self, checked: bool):
+        if checked:
+            try:
+                self.controller.set_temperature_unit(TemperatureUnit.CELSIUS)
+            except Exception as e:
+                print(f"Set unit C error: {e}")
+
+    def _onFahrenheitToggled(self, checked: bool):
+        if checked:
+            try:
+                self.controller.set_temperature_unit(TemperatureUnit.FAHRENHEIT)
+            except Exception as e:
+                print(f"Set unit F error: {e}")
 
     def minimizeWindow(self):
         self.showMinimized()

@@ -3,6 +3,7 @@ from PyQt5.QtGui import QPainter, QColor, QBrush, QRegion, QPolygon, QPen, QFont
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QComboBox, QFrame, QSizePolicy
 from app.utils.ui_utils import CircularGauge
 from app.core import CoreController, LightingProfile, OverclockLevel
+from app.core.models import TemperatureUnit
 from config import DEFAULT_FONT_FAMILY
 
 
@@ -10,6 +11,7 @@ class InternalWindow(QWidget):
     def __init__(self, parent=None, controller: CoreController = None):
         super().__init__(parent)
         self.controller = controller
+        self._temp_unit = TemperatureUnit.CELSIUS
         # Position and size similar to the reference screenshot
         self.setGeometry(300, 100, 1100, 600)
         self.setAttribute(Qt.WA_TranslucentBackground)
@@ -51,20 +53,20 @@ class InternalWindow(QWidget):
         vbox.setContentsMargins(20, 16, 20, 16)
         vbox.setSpacing(18)
 
-        # Header: Temperature (°C)
-        header = QLabel("Temperature (°C)")
-        header.setAlignment(Qt.AlignHCenter | Qt.AlignVCenter)
-        header.setFont(font_title)
-        header.setStyleSheet("color: #9aa0a6;")
-        vbox.addWidget(header)
+        # Header: Temperature (dynamic unit)
+        self.header = QLabel("Temperature (°C)")
+        self.header.setAlignment(Qt.AlignHCenter | Qt.AlignVCenter)
+        self.header.setFont(font_title)
+        self.header.setStyleSheet("color: #9aa0a6;")
+        vbox.addWidget(self.header)
 
         # Gauges row
         gauges_row = QHBoxLayout()
         gauges_row.setSpacing(40)
 
-        self.cpu_g = CircularGauge("CPU", 60)
-        self.gpu_g = CircularGauge("GPU", 55)
-        self.sys_g = CircularGauge("System", 45)
+        self.cpu_g = CircularGauge("CPU"    , 60, circle_scale=0.65, pen_width=12)
+        self.gpu_g = CircularGauge("GPU"    , 55, circle_scale=0.65, pen_width=12)
+        self.sys_g = CircularGauge("System" , 45, circle_scale=0.65, pen_width=12)
         for g in (self.cpu_g, self.gpu_g, self.sys_g):
             g.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         gauges_row.addWidget(self.cpu_g)
@@ -128,13 +130,18 @@ class InternalWindow(QWidget):
         if not self.controller:
             return
         # metrics -> gauges
-        self.controller.metrics.metricsUpdated.connect(
-            lambda cpu, gpu, sys: (
-                self.cpu_g.setValueAnimated(cpu),
-                self.gpu_g.setValueAnimated(gpu),
-                self.sys_g.setValueAnimated(sys)
-            )
-        )
+        def _emit_values(cpu_c, gpu_c, sys_c):
+            if self._temp_unit == TemperatureUnit.FAHRENHEIT:
+                c2f = lambda c: int(round(c * 9 / 5 + 32))
+                self.cpu_g.setValueAnimated(c2f(cpu_c))
+                self.gpu_g.setValueAnimated(c2f(gpu_c))
+                self.sys_g.setValueAnimated(c2f(sys_c))
+            else:
+                self.cpu_g.setValueAnimated(cpu_c)
+                self.gpu_g.setValueAnimated(gpu_c)
+                self.sys_g.setValueAnimated(sys_c)
+
+        self.controller.metrics.metricsUpdated.connect(_emit_values)
 
         # initialize combos from controller
         # Lighting
@@ -159,6 +166,13 @@ class InternalWindow(QWidget):
         self.lp_combo.currentIndexChanged.connect(self._onLightingChanged)
         self.oc_combo.currentIndexChanged.connect(self._onOverclockChanged)
 
+        # Initialize and react to temperature unit
+        try:
+            self._applyTempUnit(self.controller.temperature_unit)
+        except Exception:
+            self._applyTempUnit(TemperatureUnit.CELSIUS)
+        self.controller.temperatureUnitChanged.connect(self._applyTempUnit)
+
     def _onLightingChanged(self, idx: int):
         if not self.controller:
             return
@@ -172,6 +186,17 @@ class InternalWindow(QWidget):
         mapping = [OverclockLevel.NORMAL, OverclockLevel.FAST, OverclockLevel.EXTREME]
         if 0 <= idx < len(mapping):
             self.controller.set_overclock(mapping[idx])
+
+    def _applyTempUnit(self, unit: TemperatureUnit):
+        self._temp_unit = unit
+        if unit == TemperatureUnit.FAHRENHEIT:
+            self.header.setText("Temperature (°F)")
+            for g in (self.cpu_g, self.gpu_g, self.sys_g):
+                g.setRange(0, 212)
+        else:
+            self.header.setText("Temperature (°C)")
+            for g in (self.cpu_g, self.gpu_g, self.sys_g):
+                g.setRange(0, 100)
 
     def paintEvent(self, event):
         painter = QPainter(self)

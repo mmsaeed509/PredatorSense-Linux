@@ -25,7 +25,7 @@ class CircularGauge(QWidget):
     - min/max: range
     """
 
-    def __init__(self, title: str = "", value: int = 0, minimum: int = 0, maximum: int = 100, parent=None, circle_scale: float = 0.65, pen_width: int = 12):
+    def __init__(self, title: str = "", value: int = 0, minimum: int = 0, maximum: int = 100, parent=None, circle_scale: float = 1, pen_width: int = 9):
         super().__init__(parent)
         self._title = title
         self._value = value
@@ -67,6 +67,13 @@ class CircularGauge(QWidget):
         self.update()
 
     value = pyqtProperty(int, fget=getValue, fset=setValue)
+
+    def setRange(self, minimum: int, maximum: int):
+        self._min = int(minimum)
+        self._max = max(self._min + 1, int(maximum))
+        # clamp current value into new range
+        self._value = max(self._min, min(self._max, self._value))
+        self.update()
 
     def paintEvent(self, event):
         size = min(self.width(), self.height())

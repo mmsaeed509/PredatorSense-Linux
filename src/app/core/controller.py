@@ -1,5 +1,5 @@
 from PyQt5.QtCore import QObject, pyqtSignal
-from .models import Tab, LightingProfile, OverclockLevel
+from .models import Tab, LightingProfile, OverclockLevel, TemperatureUnit
 from .metrics_service import MetricsService
 
 
@@ -9,12 +9,14 @@ class CoreController(QObject):
     tabChanged = pyqtSignal(object)  # Tab
     lightingChanged = pyqtSignal(object)  # LightingProfile
     overclockChanged = pyqtSignal(object)  # OverclockLevel
+    temperatureUnitChanged = pyqtSignal(object)  # TemperatureUnit
 
     def __init__(self, parent=None):
         super().__init__(parent)
         self._tab = Tab.HOME
         self._lighting = LightingProfile.DEFAULT
         self._overclock = OverclockLevel.NORMAL
+        self._temp_unit = TemperatureUnit.CELSIUS
         self.metrics = MetricsService(self)
 
     # Lifecycle
@@ -40,6 +42,11 @@ class CoreController(QObject):
             self._overclock = level
             self.overclockChanged.emit(level)
 
+    def set_temperature_unit(self, unit: TemperatureUnit):
+        if unit != self._temp_unit:
+            self._temp_unit = unit
+            self.temperatureUnitChanged.emit(unit)
+
     # Getters
     @property
     def tab(self) -> Tab:
@@ -52,3 +59,7 @@ class CoreController(QObject):
     @property
     def overclock(self) -> OverclockLevel:
         return self._overclock
+
+    @property
+    def temperature_unit(self) -> TemperatureUnit:
+        return self._temp_unit

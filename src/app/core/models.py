@@ -22,3 +22,8 @@ class OverclockLevel(Enum):
     NORMAL = "Normal"
     FAST = "Fast"
     EXTREME = "Extreme"
+
+
+class TemperatureUnit(Enum):
+    CELSIUS = "C"
+    FAHRENHEIT = "F"
