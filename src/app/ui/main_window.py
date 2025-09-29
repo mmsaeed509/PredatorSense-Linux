@@ -2,11 +2,12 @@ import os
 from PyQt5.QtCore import Qt, QPoint, QRect
 from PyQt5.QtGui import QPainter, QBrush, QPolygon, QColor, QRegion, QFont, QFontDatabase, QPixmap, QPainterPath, \
     QLinearGradient, QPen
-from PyQt5.QtWidgets import QMainWindow, QPushButton, QWidget, QApplication
+from PyQt5.QtWidgets import QMainWindow, QPushButton, QWidget, QApplication, QVBoxLayout, QButtonGroup
 from app.ui.internal_window import InternalWindow
 from app.utils import ui_utils
-from config import WM_CLASS, WM_CLASS_2, FONTS_DIR, ICONS_DIR
+from config import WM_CLASS, WM_CLASS_2, FONTS_DIR, ICONS_DIR, DEFAULT_FONT_FAMILY
 from app.utils import x11_utils
+from app.core import CoreController, Tab
 
 def createMask():
     # Define a polygon to set the window shape
@@ -35,10 +36,14 @@ def openSettings():
 class CustomShapeWindow(QMainWindow):
     def __init__(self):
         super().__init__()
+        self.controller = CoreController(self)
         self.internal_window = None
         self.close_button = None
         self.settings_button = None
         self.minimize_button = None
+        self.sidebar = None
+        self.menu_group = None
+        self.menu_buttons = {}
         self.predator_font = None
         self.button_font = None
         self.logo_pixmap = None
@@ -69,8 +74,11 @@ class CustomShapeWindow(QMainWindow):
         self.addButtons()
 
         # Add the internal window shape
-        self.internal_window = InternalWindow(self)
+        self.internal_window = InternalWindow(self, controller=self.controller)
         self.internal_window.show()
+
+        # Sidebar menu
+        self.createSidebar()
 
     # Set the WM_CLASS property with instance and class names
     def set_wm_class(self):
@@ -88,10 +96,15 @@ class CustomShapeWindow(QMainWindow):
             except Exception as e:
                 # Avoid crashing on platforms without X11 or if Xlib is unavailable
                 print(f"Failed to set WM_CLASS: {e}")
+        # start core services
+        try:
+            self.controller.start()
+        except Exception as e:
+            print(f"Controller start error: {e}")
 
     def loadPredatorFont(self):
         # Load the font from the Fonts directory
-        font_path = os.path.join(FONTS_DIR, 'Squares-Bold.otf')
+        font_path = os.path.join(FONTS_DIR, f'{DEFAULT_FONT_FAMILY}.otf')
         font_id = QFontDatabase.addApplicationFont(font_path)
 
         if font_id == -1:
@@ -101,8 +114,8 @@ class CustomShapeWindow(QMainWindow):
             self.predator_font = QFont(font_family, 30, QFont.Bold)  # Adjust font size here
 
     def loadButtonFont(self):
-        # Load the italic font for buttons
-        font_path = os.path.join(FONTS_DIR, 'Squares-Bold-Italic.otf')
+        # Use default family for buttons as requested
+        font_path = os.path.join(FONTS_DIR, f'{DEFAULT_FONT_FAMILY}.otf')
         font_id = QFontDatabase.addApplicationFont(font_path)
 
         if font_id == -1:
@@ -156,8 +169,12 @@ class CustomShapeWindow(QMainWindow):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.Antialiasing)
 
-        # Draw background or other custom content
-        painter.setBrush(QBrush(QColor("#292929")))  # Set a background color
+        # Background gradient (dark)
+        bg_grad = QLinearGradient(0, 0, 0, self.height())
+        bg_grad.setColorAt(0.0, QColor("#242323"))
+        bg_grad.setColorAt(1.0, QColor("#141414"))
+        painter.setBrush(QBrush(bg_grad))
+        painter.setPen(Qt.NoPen)
         painter.drawRect(self.rect())
 
         # Draw the logo in the top left corner, slightly moved to the right
@@ -176,10 +193,10 @@ class CustomShapeWindow(QMainWindow):
         path.lineTo(self.width() / 2 - 150, 70)  # Bottom left corner of the trapezoid
         path.closeSubpath()
 
-        # Create a gradient from "#141414" to "#0D0D0D"
+        # Create a gradient from "#141414" to "#242323"
         gradient = QLinearGradient(self.width() / 2 - 200, 0, self.width() / 2 - 200, 70)
         gradient.setColorAt(0, QColor("#141414"))
-        gradient.setColorAt(1, QColor("#0D0D0D"))
+        gradient.setColorAt(1, QColor("#242323"))
 
         # Set the gradient brush for the trapezoid background
         painter.setBrush(QBrush(gradient))
@@ -190,7 +207,7 @@ class CustomShapeWindow(QMainWindow):
         text_rect = painter.fontMetrics().boundingRect(text)
         text_width = text_rect.width()
         text_x = (self.width() - text_width) // 2
-        text_y = 50  # Position text below the trapezoid background
+        text_y = 45  # Position text below the trapezoid background
 
         # Draw "Predator" and "Sense" with different colors
         painter.setPen(QColor("#d8d8d8"))  # Set color for "Predator"
@@ -198,3 +215,75 @@ class CustomShapeWindow(QMainWindow):
 
         painter.setPen(QColor("#acacac"))  # Set color for "Sense"
         painter.drawText(text_x + painter.fontMetrics().width("Predator"), text_y, "Sense")
+
+    def createSidebar(self):
+        # Sidebar container
+        self.sidebar = QWidget(self)
+        self.sidebar.setGeometry(30, 120, 240, 520)
+        self.sidebar.setStyleSheet(
+            """
+            QWidget { background-color: transparent; }
+            QPushButton {
+                color: #cfcfcf; background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 10px;
+                padding: 10px 14px; text-align: left; font-size: 14px;
+            }
+            QPushButton:hover { border-color: #00B0C8; }
+            QPushButton:checked {
+                background: #0e2c31; border: 1px solid #00B0C8; color: #e6feff;
+            }
+            """
+        )
+
+        vbox = QVBoxLayout(self.sidebar)
+        vbox.setContentsMargins(0, 0, 0, 0)
+        vbox.setSpacing(10)
+
+        items = [
+            "Home",
+            "Lighting",
+            "Overclocking",
+            "Fan Control",
+            "Monitoring",
+            "Game Sync",
+            "App Center",
+        ]
+
+        self.menu_group = QButtonGroup(self)
+        self.menu_group.setExclusive(True)
+
+        for name in items:
+            btn = QPushButton(name)
+            btn.setCheckable(True)
+            # Apply default font family for sidebar buttons
+            if self.predator_font:
+                btn.setFont(QFont(self.predator_font.family(), 14, QFont.Bold))
+            btn.clicked.connect(lambda checked, n=name: self.onMenuSelected(n))
+            vbox.addWidget(btn)
+            self.menu_group.addButton(btn)
+            self.menu_buttons[name] = btn
+
+        # Default selection
+        self.menu_buttons["Home"].setChecked(True)
+
+    def onMenuSelected(self, name: str):
+        # Highlighting handled by stylesheet via :checked
+        # Update controller tab
+        mapping = {
+            "Home": Tab.HOME,
+            "Lighting": Tab.LIGHTING,
+            "Overclocking": Tab.OVERCLOCKING,
+            "Fan Control": Tab.FAN_CONTROL,
+            "Monitoring": Tab.MONITORING,
+            "Game Sync": Tab.GAME_SYNC,
+            "App Center": Tab.APP_CENTER,
+        }
+        tab = mapping.get(name)
+        if tab:
+            self.controller.set_tab(tab)
+
+    def closeEvent(self, event):
+        try:
+            self.controller.stop()
+        except Exception:
+            pass
+        super().closeEvent(event)

@@ -1,18 +1,26 @@
 from PyQt5.QtCore import Qt, QPoint
-from PyQt5.QtGui import QPainter, QColor, QBrush, QRegion, QPolygon, QPen  # Corrected import for QPolygon
-from PyQt5.QtWidgets import QWidget
+from PyQt5.QtGui import QPainter, QColor, QBrush, QRegion, QPolygon, QPen, QFont
+from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QComboBox, QFrame, QSizePolicy
+from app.utils.ui_utils import CircularGauge
+from app.core import CoreController, LightingProfile, OverclockLevel
+from config import DEFAULT_FONT_FAMILY
+
 
 class InternalWindow(QWidget):
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, controller: CoreController = None):
         super().__init__(parent)
-        # Set the geometry (position and size) of the internal window
-        # self.setGeometry(x, y, width, height)
+        self.controller = controller
+        # Position and size similar to the reference screenshot
         self.setGeometry(300, 100, 1100, 600)
-        self.setAttribute(Qt.WA_TranslucentBackground)  # Make the background transparent
-        self.polygon = self.createCustomMask()  # Store the polygon used for the mask
+        self.setAttribute(Qt.WA_TranslucentBackground)
+        self.polygon = self.createCustomMask()
+
+        # Content layout on top of the painted polygon
+        self._buildContent()
+        self._wireController()
 
     def createCustomMask(self):
-        # Define points for an 8-sided polygon
+        # Angled-corners panel
         points = [
             QPoint(1080, 0),   # Top center, 1
             QPoint(1100, 20),  # Top right, 2
@@ -27,21 +35,155 @@ class InternalWindow(QWidget):
             QPoint(0, 20),     # Middle left, 11
             QPoint(20, 0)      # Top left, 12
         ]
-
         polygon = QPolygon(points)
-        mask = QRegion(polygon)
-        self.setMask(mask)  # Apply the mask to make the window non-rectangular
-        return polygon  # Return the polygon for use in the paint event
+        self.setMask(QRegion(polygon))
+        return polygon
+
+    def _buildContent(self):
+        font_title = QFont(DEFAULT_FONT_FAMILY, 12)
+        font_label = QFont(DEFAULT_FONT_FAMILY, 10)
+
+        wrapper = QWidget(self)
+        wrapper.setAttribute(Qt.WA_TranslucentBackground)
+        wrapper.setGeometry(30, 20, self.width() - 60, self.height() - 40)
+
+        vbox = QVBoxLayout(wrapper)
+        vbox.setContentsMargins(20, 16, 20, 16)
+        vbox.setSpacing(18)
+
+        # Header: Temperature (°C)
+        header = QLabel("Temperature (°C)")
+        header.setAlignment(Qt.AlignHCenter | Qt.AlignVCenter)
+        header.setFont(font_title)
+        header.setStyleSheet("color: #9aa0a6;")
+        vbox.addWidget(header)
+
+        # Gauges row
+        gauges_row = QHBoxLayout()
+        gauges_row.setSpacing(40)
+
+        self.cpu_g = CircularGauge("CPU", 60)
+        self.gpu_g = CircularGauge("GPU", 55)
+        self.sys_g = CircularGauge("System", 45)
+        for g in (self.cpu_g, self.gpu_g, self.sys_g):
+            g.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        gauges_row.addWidget(self.cpu_g)
+        gauges_row.addWidget(self.gpu_g)
+        gauges_row.addWidget(self.sys_g)
+        vbox.addLayout(gauges_row)
+
+        # Separator
+        sep = QFrame()
+        sep.setFrameShape(QFrame.HLine)
+        sep.setStyleSheet("color: #2a2a2a;")
+        vbox.addWidget(sep)
+
+        # Bottom controls: Lighting Profile and GPU Overclocking
+        bottom = QHBoxLayout()
+        bottom.setSpacing(80)
+
+        # Lighting Profile
+        lp_box = QVBoxLayout()
+        lp_label = QLabel("Lighting Profile")
+        lp_label.setFont(font_label)
+        lp_label.setStyleSheet("color: #9aa0a6;")
+        self.lp_combo = QComboBox()
+        self.lp_combo.setFont(QFont(DEFAULT_FONT_FAMILY, 10))
+        self.lp_combo.addItems(["Default", "Breathing", "Wave", "Ripple"]) 
+        self.lp_combo.setStyleSheet(
+            """
+            QComboBox { background: #1A1A1A; color: #e0e0e0; padding: 6px 10px; border: 1px solid #2b2b2b; border-radius: 6px; }
+            QComboBox::drop-down { width: 18px; }
+            QComboBox:hover { border-color: #00B0C8; }
+            QComboBox QAbstractItemView { background: #1A1A1A; color: #e0e0e0; selection-background-color: #0e2c31; selection-color: #e6feff; border: 1px solid #2b2b2b; }
+            """
+        )
+        lp_box.addWidget(lp_label)
+        lp_box.addWidget(self.lp_combo)
+
+        # GPU Overclocking
+        oc_box = QVBoxLayout()
+        oc_label = QLabel("GPU Overclocking")
+        oc_label.setFont(font_label)
+        oc_label.setStyleSheet("color: #9aa0a6;")
+        self.oc_combo = QComboBox()
+        self.oc_combo.setFont(QFont(DEFAULT_FONT_FAMILY, 10))
+        self.oc_combo.addItems(["Normal", "Fast", "Extreme"]) 
+        self.oc_combo.setStyleSheet(
+            """
+            QComboBox { background: #1A1A1A; color: #e0e0e0; padding: 6px 10px; border: 1px solid #2b2b2b; border-radius: 6px; }
+            QComboBox::drop-down { width: 18px; }
+            QComboBox:hover { border-color: #00B0C8; }
+            QComboBox QAbstractItemView { background: #1A1A1A; color: #e0e0e0; selection-background-color: #0e2c31; selection-color: #e6feff; border: 1px solid #2b2b2b; }
+            """
+        )
+        oc_box.addWidget(oc_label)
+        oc_box.addWidget(self.oc_combo)
+
+        bottom.addLayout(lp_box, 1)
+        bottom.addLayout(oc_box, 1)
+        vbox.addLayout(bottom)
+
+    def _wireController(self):
+        if not self.controller:
+            return
+        # metrics -> gauges
+        self.controller.metrics.metricsUpdated.connect(
+            lambda cpu, gpu, sys: (
+                self.cpu_g.setValueAnimated(cpu),
+                self.gpu_g.setValueAnimated(gpu),
+                self.sys_g.setValueAnimated(sys)
+            )
+        )
+
+        # initialize combos from controller
+        # Lighting
+        lp_to_index = {
+            LightingProfile.DEFAULT: 0,
+            LightingProfile.BREATHING: 1,
+            LightingProfile.WAVE: 2,
+            LightingProfile.RIPPLE: 3,
+        }
+        oc_to_index = {
+            OverclockLevel.NORMAL: 0,
+            OverclockLevel.FAST: 1,
+            OverclockLevel.EXTREME: 2,
+        }
+        try:
+            self.lp_combo.setCurrentIndex(lp_to_index[self.controller.lighting])
+            self.oc_combo.setCurrentIndex(oc_to_index[self.controller.overclock])
+        except Exception:
+            pass
+
+        # UI -> controller
+        self.lp_combo.currentIndexChanged.connect(self._onLightingChanged)
+        self.oc_combo.currentIndexChanged.connect(self._onOverclockChanged)
+
+    def _onLightingChanged(self, idx: int):
+        if not self.controller:
+            return
+        mapping = [LightingProfile.DEFAULT, LightingProfile.BREATHING, LightingProfile.WAVE, LightingProfile.RIPPLE]
+        if 0 <= idx < len(mapping):
+            self.controller.set_lighting(mapping[idx])
+
+    def _onOverclockChanged(self, idx: int):
+        if not self.controller:
+            return
+        mapping = [OverclockLevel.NORMAL, OverclockLevel.FAST, OverclockLevel.EXTREME]
+        if 0 <= idx < len(mapping):
+            self.controller.set_overclock(mapping[idx])
 
     def paintEvent(self, event):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.Antialiasing)
 
-        # Draw the custom shape with a color fill
-        painter.setBrush(QBrush(QColor("#121212")))  # Use a custom background color
-        painter.drawPolygon(self.polygon)  # Draw the filled polygon
+        # Panel fill
+        painter.setBrush(QBrush(QColor("#121212")))
+        painter.setPen(Qt.NoPen)
+        painter.drawPolygon(self.polygon)
 
-        # Draw the border with the specified color
-        pen = QPen(QColor("#00B0C8"), 3)  # Create a pen with the desired color and border width
+        # Cyan border
+        pen = QPen(QColor("#00B0C8"), 3)
         painter.setPen(pen)
-        painter.drawPolygon(self.polygon)  # Draw the polygon border
+        painter.setBrush(Qt.NoBrush)
+        painter.drawPolygon(self.polygon)
