@@ -3,12 +3,12 @@ PredatorSense GUI App Implementation For Linux
 
 ![](./preview.png)
 
-### The GUI App For [**`acer-predator-turbo-and-rgb-keyboard-linux-module`**](https://github.com/JafarAkhondali/acer-predator-turbo-and-rgb-keyboard-linux-module)
+### The GUI App For [**`Linuwu-Sense`**](https://github.com/0x7375646F/Linuwu-Sense)
 
 Install dependencies
 
 ```shell
-pip install -r libs.txt  
+pip install -r requirements.txt  
 ```
 
 run App
