@@ -3,7 +3,10 @@ from PyQt5.QtCore import Qt, QPoint, QRect
 from PyQt5.QtGui import QPainter, QBrush, QPolygon, QColor, QRegion, QFont, QFontDatabase, QPixmap, QPainterPath, \
     QLinearGradient, QPen
 from PyQt5.QtWidgets import QMainWindow, QPushButton, QWidget, QApplication
-from frontend.internal_window import InternalWindow
+from app.ui.internal_window import InternalWindow
+from app.utils import ui_utils
+from config import WM_CLASS, WM_CLASS_2, FONTS_DIR, ICONS_DIR
+from app.utils import x11_utils
 
 def createMask():
     # Define a polygon to set the window shape
@@ -39,6 +42,7 @@ class CustomShapeWindow(QMainWindow):
         self.predator_font = None
         self.button_font = None
         self.logo_pixmap = None
+        self._wm_class_set = False
         self.initUI()
 
     def initUI(self):
@@ -68,9 +72,26 @@ class CustomShapeWindow(QMainWindow):
         self.internal_window = InternalWindow(self)
         self.internal_window.show()
 
+    # Set the WM_CLASS property with instance and class names
+    def set_wm_class(self):
+        # Get the native window ID
+        win_id = self.winId().__int__()
+        x11_utils.set_wm_class(win_id, WM_CLASS_2, WM_CLASS)
+
+    def showEvent(self, event):
+        super().showEvent(event)
+        # Ensure WM_CLASS is set once the native window is created (after show)
+        if not self._wm_class_set:
+            try:
+                self.set_wm_class()
+                self._wm_class_set = True
+            except Exception as e:
+                # Avoid crashing on platforms without X11 or if Xlib is unavailable
+                print(f"Failed to set WM_CLASS: {e}")
+
     def loadPredatorFont(self):
         # Load the font from the Fonts directory
-        font_path = os.path.join(os.path.dirname(__file__), '../Fonts', 'Squares-Bold.otf')
+        font_path = os.path.join(FONTS_DIR, 'Squares-Bold.otf')
         font_id = QFontDatabase.addApplicationFont(font_path)
 
         if font_id == -1:
@@ -81,7 +102,7 @@ class CustomShapeWindow(QMainWindow):
 
     def loadButtonFont(self):
         # Load the italic font for buttons
-        font_path = os.path.join(os.path.dirname(__file__), '../Fonts', 'Squares-Bold-Italic.otf')
+        font_path = os.path.join(FONTS_DIR, 'Squares-Bold-Italic.otf')
         font_id = QFontDatabase.addApplicationFont(font_path)
 
         if font_id == -1:
@@ -92,7 +113,7 @@ class CustomShapeWindow(QMainWindow):
 
     def loadLogo(self):
         # Load the logo image from the working directory
-        logo_path = os.path.join(os.path.dirname(__file__), '../PredatorLogo.png')
+        logo_path = os.path.join(ICONS_DIR, 'PredatorLogo.png')
         if os.path.exists(logo_path):
             self.logo_pixmap = QPixmap(logo_path)
         else:
@@ -164,11 +185,6 @@ class CustomShapeWindow(QMainWindow):
         painter.setBrush(QBrush(gradient))
         painter.drawPath(path)
 
-        # Set the border for the trapezoid
-        # border_pen = QPen(QColor("#00B0C8"), 3)  # Create a pen with border color and width
-        # painter.setPen(border_pen)
-        # painter.drawPath(path)  # Draw the trapezoid border
-
         # Center the text horizontally
         text = "PredatorSense"
         text_rect = painter.fontMetrics().boundingRect(text)
@@ -182,5 +198,3 @@ class CustomShapeWindow(QMainWindow):
 
         painter.setPen(QColor("#acacac"))  # Set color for "Sense"
         painter.drawText(text_x + painter.fontMetrics().width("Predator"), text_y, "Sense")
-
-

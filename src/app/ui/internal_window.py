@@ -1,5 +1,3 @@
-# frontend/internal_window.py
-
 from PyQt5.QtCore import Qt, QPoint
 from PyQt5.QtGui import QPainter, QColor, QBrush, QRegion, QPolygon, QPen  # Corrected import for QPolygon
 from PyQt5.QtWidgets import QWidget
