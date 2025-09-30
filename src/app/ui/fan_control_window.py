@@ -2,6 +2,7 @@ from PyQt5.QtCore import Qt, QPoint
 from PyQt5.QtGui import QPainter, QColor, QBrush, QRegion, QPolygon, QPen, QFont
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QSizePolicy, QButtonGroup
 from app.utils.ui_utils import FanDial, ModeButton
+from app.utils.config_utils import config_manager
 from app.core import CoreController
 from config import DEFAULT_FONT_FAMILY
 
@@ -22,8 +23,12 @@ class FanControlWindow(QWidget):
         self.setGeometry(300, 100, 1100, 600)
         self.setAttribute(Qt.WA_TranslucentBackground)
         self.polygon = self._create_mask()
-
+        
+        # Initialize mode tracking
+        self._current_mode = None
+        
         self._build_ui()
+        self._load_saved_mode()
 
     # Panel mask (same shape as InternalWindow for consistency)
     def _create_mask(self):
@@ -74,16 +79,18 @@ class FanControlWindow(QWidget):
         self.btn_custom = ModeButton("Custom")
         self.btn_auto.setChecked(True)
         self.btn_custom.setEnabled(False)
+        
+        # Map mode names to buttons for easier access
+        self._mode_buttons = {
+            'auto': self.btn_auto,
+            'max': self.btn_max,
+            'custom': self.btn_custom
+        }
 
-        # Exclusive behavior
-        def select(btn: ModeButton):
-            self.btn_auto.setChecked(btn is self.btn_auto)
-            self.btn_max.setChecked(btn is self.btn_max)
-            self.btn_custom.setChecked(btn is self.btn_custom)
-
-        self.btn_auto.clicked.connect(lambda: select(self.btn_auto))
-        self.btn_max.clicked.connect(lambda: select(self.btn_max))
-        self.btn_custom.clicked.connect(lambda: select(self.btn_custom))
+        # Connect button signals
+        self.btn_auto.clicked.connect(lambda: self._on_mode_selected('auto'))
+        self.btn_max.clicked.connect(lambda: self._on_mode_selected('max'))
+        self.btn_custom.clicked.connect(lambda: self._on_mode_selected('custom'))
 
         mode_row.addStretch(1)
         mode_row.addWidget(self.btn_auto)
@@ -111,6 +118,32 @@ class FanControlWindow(QWidget):
     def setRpm(self, cpu_rpm: int, gpu_rpm: int):
         self.cpu_dial.setRpm(int(cpu_rpm))
         self.gpu_dial.setRpm(int(gpu_rpm))
+        
+    def _on_mode_selected(self, mode: str):
+        """Handle mode selection and update UI and settings."""
+        if mode not in self._mode_buttons:
+            return
+            
+        # Update button states
+        for name, button in self._mode_buttons.items():
+            button.setChecked(name == mode)
+            
+        # Save the selected mode
+        self._current_mode = mode
+        config_manager.set('fan_mode', mode)
+        
+        # TODO: Apply the fan mode to the system
+        # This would involve calling the appropriate controller method
+        # For example: self.controller.set_fan_mode(mode)
+    
+    def _load_saved_mode(self):
+        """Load the saved fan mode from config and update UI."""
+        saved_mode = config_manager.get('fan_mode', 'auto')
+        self._on_mode_selected(saved_mode)
+        
+    def get_current_mode(self) -> str:
+        """Get the currently selected fan mode."""
+        return self._current_mode or 'auto'
 
     def paintEvent(self, event):
         painter = QPainter(self)
