@@ -153,3 +153,23 @@ def set_battery_limiter(enabled: bool) -> bool:
     if not path:
         return False
     return _run_cmd(["bash", "-lc", f"echo {val} | tee {path}"])
+
+
+# USB charging
+def get_usb_charging_threshold() -> Optional[int]:
+    """Get current USB charging threshold (0, 10, 20, or 30)"""
+    return _read_int(_attr_path("usb_charging"))
+
+
+def set_usb_charging_threshold(value: int) -> bool:
+    """Set USB charging threshold. Valid values: 0, 10, 20, 30"""
+    if value not in (0, 10, 20, 30):
+        return False
+
+    if _run_cmd(["linuwu-sense", "--usb-charging", str(value)]):
+        return True
+
+    path = _attr_path("usb_charging")
+    if not path:
+        return False
+    return _run_cmd(["bash", "-lc", f"echo {value} | tee {path}"])

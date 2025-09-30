@@ -1,6 +1,7 @@
 from PyQt5.QtCore import Qt, QPoint
 from PyQt5.QtGui import QPainter, QColor, QBrush, QRegion, QPolygon, QPen, QFont
-from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QTabWidget, QPushButton
+from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
+                           QTabWidget, QPushButton, QButtonGroup)
 from app.core import CoreController
 from config import DEFAULT_FONT_FAMILY
 
@@ -175,7 +176,64 @@ class BatteryUSBWindow(QWidget):
         # USB Charging Tab
         usb_tab = QWidget()
         usb_layout = QVBoxLayout(usb_tab)
-        usb_layout.addWidget(QLabel("USB Charging content coming soon..."))
+        usb_layout.setAlignment(Qt.AlignCenter)
+
+        # Info label
+        info = QLabel(
+            "⚡ USB Power When Laptop is Off\n\n"
+            "Allow USB ports to provide power for charging devices\n"
+            "even when your laptop is turned off.\n\n"
+            "You can set a battery threshold to automatically stop\n"
+            "USB charging to preserve battery life."
+        )
+        info.setStyleSheet("color: #e0e0e0; font-size: 14px;")
+        info.setAlignment(Qt.AlignCenter)
+        usb_layout.addWidget(info)
+        usb_layout.addSpacing(20)
+
+        # Status label
+        self.usb_status = QLabel("USB Charging: Disabled")
+        self.usb_status.setStyleSheet("color: #9aa0a6; font-size: 14px;")
+        self.usb_status.setAlignment(Qt.AlignCenter)
+        usb_layout.addWidget(self.usb_status)
+        usb_layout.addSpacing(20)
+
+        # Mode buttons
+        btn_layout = QHBoxLayout()
+        self.usb_group = QButtonGroup()
+        self.usb_group.setExclusive(True)
+
+        for value in (0, 10, 20, 30):
+            label = "Disabled" if value == 0 else f"Until {value}%"
+            btn = QPushButton(label)
+            btn.setCheckable(True)
+            btn.setProperty("value", value)  # Store threshold value
+            btn.setStyleSheet("""
+                QPushButton {
+                    background: #1a1a1a;
+                    color: #e0e0e0;
+                    border: 1px solid #2a2a2a;
+                    border-radius: 6px;
+                    padding: 8px 16px;
+                    font-size: 14px;
+                    min-width: 120px;
+                }
+                QPushButton:hover {
+                    border-color: #00B0C8;
+                }
+                QPushButton:pressed {
+                    background: #0e2c31;
+                }
+                QPushButton:checked {
+                    background: #0e2c31;
+                    border-color: #00B0C8;
+                    color: #00B0C8;
+                }
+            """)
+            self.usb_group.addButton(btn)
+            btn_layout.addWidget(btn)
+
+        usb_layout.addLayout(btn_layout)
         usb_layout.addStretch()
 
         # Add tabs
@@ -191,6 +249,8 @@ class BatteryUSBWindow(QWidget):
             self.controller.battery.calibrationStateChanged.connect(self._on_calib_state)
             self.limiter_btn.clicked.connect(self._toggle_limiter)
             self.controller.battery.limiterStateChanged.connect(self._on_limiter_state)
+            self.usb_group.buttonClicked.connect(self._on_usb_button)
+            self.controller.battery.usbChargingChanged.connect(self._on_usb_state)
 
     def _start_calibration(self):
         if self.controller:
@@ -226,6 +286,29 @@ class BatteryUSBWindow(QWidget):
         self.limiter_status.setText(f"Limiter Status: {status}")
         self.limiter_status.setStyleSheet(f"color: {color}; font-size: 14px;")
         self.limiter_btn.setText("Disable Limiter" if is_limited else "Enable Limiter")
+
+    def _on_usb_button(self, button: QPushButton):
+        if self.controller:
+            value = button.property("value")
+            if not self.controller.battery.set_usb_charging(value):
+                # Reset selection on failure
+                button.setChecked(False)
+
+    def _on_usb_state(self, threshold: int):
+        # Update button states
+        for btn in self.usb_group.buttons():
+            btn.setChecked(btn.property("value") == threshold)
+        
+        # Update status text
+        if threshold == 0:
+            status = "Disabled"
+            color = "#9aa0a6"
+        else:
+            status = f"Active until {threshold}%"
+            color = "#00B0C8"
+        
+        self.usb_status.setText(f"USB Charging: {status}")
+        self.usb_status.setStyleSheet(f"color: {color}; font-size: 14px;")
 
     def paintEvent(self, event):
         painter = QPainter(self)

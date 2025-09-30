@@ -6,7 +6,8 @@ class BatteryService(QObject):
     
     calibrationStateChanged = pyqtSignal(bool)  # is_calibrating
     limiterStateChanged = pyqtSignal(bool)  # Add new signal
-
+    usbChargingChanged = pyqtSignal(int)  # Add new signal
+    
     def __init__(self, parent=None):
         super().__init__(parent)
         self._timer = QTimer(self)
@@ -31,6 +32,10 @@ class BatteryService(QObject):
     def set_limiter(self, enabled: bool) -> bool:
         return lw.set_battery_limiter(enabled)
 
+    def set_usb_charging(self, threshold: int) -> bool:
+        """Set USB charging threshold (0, 10, 20, 30)"""
+        return lw.set_usb_charging_threshold(threshold)
+
     def _poll(self):
         try:
             is_calibrating = bool(lw.get_battery_calibration_status())
@@ -38,5 +43,9 @@ class BatteryService(QObject):
             
             is_limited = bool(lw.get_battery_limiter_status())
             self.limiterStateChanged.emit(is_limited)
+            
+            usb_threshold = lw.get_usb_charging_threshold()
+            if usb_threshold is not None:
+                self.usbChargingChanged.emit(usb_threshold)
         except Exception as e:
             print(f"Battery poll error: {e}")
