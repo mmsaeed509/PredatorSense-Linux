@@ -13,6 +13,7 @@ from PyQt5.QtWidgets import (
 from app.ui.internal_window import InternalWindow
 from app.ui.fan_control_window import FanControlWindow
 from app.ui.settings_popup import SettingsPopup
+from app.ui.monitoring_window import MonitoringWindow
 from app.utils import ui_utils
 from config import WM_CLASS, WM_CLASS_2, FONTS_DIR, ICONS_DIR, DEFAULT_FONT_FAMILY
 from app.utils import x11_utils
@@ -47,6 +48,7 @@ class CustomShapeWindow(QMainWindow):
         self.controller = CoreController(self)
         self.internal_window = None
         self.fan_window = None
+        self.monitoring_window = None
         self.current_content = None
         self.close_button = None
         self.settings_button = None
@@ -360,6 +362,10 @@ class CustomShapeWindow(QMainWindow):
             except Exception:
                 pass
 
+    def _ensureMonitoringWindow(self):
+        if self.monitoring_window is None:
+            self.monitoring_window = MonitoringWindow(self, controller=self.controller)
+
     def _swapContent(self, new_widget: QWidget):
         if self.current_content is new_widget:
             return
@@ -375,6 +381,9 @@ class CustomShapeWindow(QMainWindow):
         if tab == Tab.FAN_CONTROL:
             self._ensureFanWindow()
             self._swapContent(self.fan_window)
+        elif tab == Tab.MONITORING:
+            self._ensureMonitoringWindow()
+            self._swapContent(self.monitoring_window)
         else:
             # Default to the Home internal window for all other tabs for now
             self._swapContent(self.internal_window)
