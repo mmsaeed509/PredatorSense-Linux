@@ -2,6 +2,7 @@ from PyQt5.QtCore import QObject, pyqtSignal
 from .models import Tab, LightingProfile, OverclockLevel, TemperatureUnit
 from .metrics_service import MetricsService
 from .fan_service import FanService
+from .battery_service import BatteryService
 
 
 class CoreController(QObject):
@@ -20,6 +21,7 @@ class CoreController(QObject):
         self._temp_unit = TemperatureUnit.CELSIUS
         self.metrics = MetricsService(self)
         self.fans = FanService(self)
+        self.battery = BatteryService(self)
 
     # Lifecycle
     def start(self):
@@ -28,11 +30,19 @@ class CoreController(QObject):
             self.fans.start()
         except Exception:
             pass
+        try:
+            self.battery.start()
+        except Exception:
+            pass
 
     def stop(self):
         self.metrics.stop()
         try:
             self.fans.stop()
+        except Exception:
+            pass
+        try:
+            self.battery.stop()
         except Exception:
             pass
 

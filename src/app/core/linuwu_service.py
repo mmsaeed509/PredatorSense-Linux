@@ -113,3 +113,43 @@ def set_backlight_timeout_enabled(enabled: bool) -> bool:
     if not path:
         return False
     return _run_cmd(["bash", "-lc", f"echo {val} | tee {path}"])
+
+
+# Battery calibration
+def get_battery_calibration_status() -> Optional[bool]:
+    v = _read_int(_attr_path("battery_calibration"))
+    return None if v is None else (v == 1)
+
+
+def set_battery_calibration(enabled: bool) -> bool:
+    if enabled:
+        if _run_cmd(["linuwu-sense", "--battery-calibration"]):
+            return True
+    else:
+        if _run_cmd(["linuwu-sense", "--stop-battery-calibration"]):
+            return True
+    val = "1" if enabled else "0"
+    path = _attr_path("battery_calibration")
+    if not path:
+        return False
+    return _run_cmd(["bash", "-lc", f"echo {val} | tee {path}"])
+
+
+# Battery limiter
+def get_battery_limiter_status() -> Optional[bool]:
+    v = _read_int(_attr_path("battery_limiter"))
+    return None if v is None else (v == 1)
+
+
+def set_battery_limiter(enabled: bool) -> bool:
+    if enabled:
+        if _run_cmd(["linuwu-sense", "--battery-limiter"]):
+            return True
+    else:
+        if _run_cmd(["linuwu-sense", "--no-battery-limiter"]):
+            return True
+    val = "1" if enabled else "0"
+    path = _attr_path("battery_limiter")
+    if not path:
+        return False
+    return _run_cmd(["bash", "-lc", f"echo {val} | tee {path}"])
