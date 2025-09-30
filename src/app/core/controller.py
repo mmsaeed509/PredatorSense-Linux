@@ -1,6 +1,7 @@
 from PyQt5.QtCore import QObject, pyqtSignal
 from .models import Tab, LightingProfile, OverclockLevel, TemperatureUnit
 from .metrics_service import MetricsService
+from .fan_service import FanService
 
 
 class CoreController(QObject):
@@ -18,13 +19,22 @@ class CoreController(QObject):
         self._overclock = OverclockLevel.NORMAL
         self._temp_unit = TemperatureUnit.CELSIUS
         self.metrics = MetricsService(self)
+        self.fans = FanService(self)
 
     # Lifecycle
     def start(self):
         self.metrics.start()
+        try:
+            self.fans.start()
+        except Exception:
+            pass
 
     def stop(self):
         self.metrics.stop()
+        try:
+            self.fans.stop()
+        except Exception:
+            pass
 
     # State setters
     def set_tab(self, tab: Tab):

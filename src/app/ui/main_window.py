@@ -11,12 +11,13 @@ from PyQt5.QtWidgets import (
     QButtonGroup,
 )
 from app.ui.internal_window import InternalWindow
+from app.ui.fan_control_window import FanControlWindow
+from app.ui.settings_popup import SettingsPopup
 from app.utils import ui_utils
 from config import WM_CLASS, WM_CLASS_2, FONTS_DIR, ICONS_DIR, DEFAULT_FONT_FAMILY
 from app.utils import x11_utils
 from app.core import CoreController, Tab
 from app.core.models import TemperatureUnit
-from app.ui.settings_popup import SettingsPopup
 
 def createMask():
     # Define a polygon to set the window shape
@@ -45,6 +46,8 @@ class CustomShapeWindow(QMainWindow):
         super().__init__()
         self.controller = CoreController(self)
         self.internal_window = None
+        self.fan_window = None
+        self.current_content = None
         self.close_button = None
         self.settings_button = None
         self.minimize_button = None
@@ -84,9 +87,13 @@ class CustomShapeWindow(QMainWindow):
         # Add the internal window shape
         self.internal_window = InternalWindow(self, controller=self.controller)
         self.internal_window.show()
+        self.current_content = self.internal_window
 
         # Sidebar menu
         self.createSidebar()
+
+        # React to tab changes to swap content views
+        self.controller.tabChanged.connect(self._onTabChanged)
 
         # Settings popup
         try:
@@ -337,6 +344,40 @@ class CustomShapeWindow(QMainWindow):
         tab = mapping.get(name)
         if tab:
             self.controller.set_tab(tab)
+
+    def _ensureFanWindow(self):
+        if self.fan_window is None:
+            self.fan_window = FanControlWindow(self, controller=self.controller)
+            # Wire buttons -> FanService actions
+            try:
+                self.fan_window.btn_auto.clicked.connect(lambda: self.controller.fans.set_auto())
+                self.fan_window.btn_max.clicked.connect(lambda: self.controller.fans.set_max())
+            except Exception:
+                pass
+            # Wire FanService RPM -> UI
+            try:
+                self.controller.fans.rpmUpdated.connect(self.fan_window.setRpm)
+            except Exception:
+                pass
+
+    def _swapContent(self, new_widget: QWidget):
+        if self.current_content is new_widget:
+            return
+        # Hide previous
+        if self.current_content is not None:
+            self.current_content.hide()
+        # Show new
+        if new_widget is not None:
+            new_widget.show()
+        self.current_content = new_widget
+
+    def _onTabChanged(self, tab: Tab):
+        if tab == Tab.FAN_CONTROL:
+            self._ensureFanWindow()
+            self._swapContent(self.fan_window)
+        else:
+            # Default to the Home internal window for all other tabs for now
+            self._swapContent(self.internal_window)
 
     def closeEvent(self, event):
         try:
