@@ -15,6 +15,8 @@ from app.ui.fan_control_window import FanControlWindow
 from app.ui.settings_popup import SettingsPopup
 from app.ui.monitoring_window import MonitoringWindow
 from app.ui.battery_usb_window import BatteryUSBWindow
+from app.ui.overclocking_window import OverclockingWindow
+from app.ui.lighting_window import LightingWindow
 from app.utils import ui_utils
 from config import WM_CLASS, WM_CLASS_2, FONTS_DIR, ICONS_DIR, DEFAULT_FONT_FAMILY
 from app.utils import x11_utils
@@ -51,6 +53,8 @@ class CustomShapeWindow(QMainWindow):
         self.fan_window = None
         self.monitoring_window = None
         self.battery_usb_window = None
+        self.overclock_window = None
+        self.lighting_window = None
         self.current_content = None
         self.close_button = None
         self.settings_button = None
@@ -372,6 +376,14 @@ class CustomShapeWindow(QMainWindow):
         if self.battery_usb_window is None:
             self.battery_usb_window = BatteryUSBWindow(self, controller=self.controller)
 
+    def _ensureOverclockWindow(self):
+        if self.overclock_window is None:
+            self.overclock_window = OverclockingWindow(self, controller=self.controller)
+
+    def _ensureLightingWindow(self):
+        if self.lighting_window is None:
+            self.lighting_window = LightingWindow(self, controller=self.controller)
+
     def _swapContent(self, new_widget: QWidget):
         if self.current_content is new_widget:
             return
@@ -393,6 +405,12 @@ class CustomShapeWindow(QMainWindow):
         elif tab == Tab.BATTERY_USB:
             self._ensureBatteryUSBWindow()
             self._swapContent(self.battery_usb_window)
+        elif tab == Tab.OVERCLOCKING:
+            self._ensureOverclockWindow()
+            self._swapContent(self.overclock_window)
+        elif tab == Tab.LIGHTING:
+            self._ensureLightingWindow()
+            self._swapContent(self.lighting_window)
         else:
             # Default to the Home internal window for all other tabs
             self._swapContent(self.internal_window)
