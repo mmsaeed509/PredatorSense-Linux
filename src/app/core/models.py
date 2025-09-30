@@ -7,7 +7,7 @@ class Tab(Enum):
     OVERCLOCKING = auto()
     FAN_CONTROL = auto()
     MONITORING = auto()
-    GAME_SYNC = auto()
+    GAME_APP_SYNC = auto()
     BATTERY_USB = auto()
 
 

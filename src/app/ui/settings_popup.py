@@ -89,7 +89,7 @@ class SettingsPopup(QFrame):
         # Placeholders for future features
         row, self.chk_sticky = make_switch("Sticky keys", False)
         vbox.addLayout(row)
-        row, self.chk_winmenu = make_switch("Windows and menu key", True)
+        row, self.chk_winmenu = make_switch("Windows and menu key", False)
         vbox.addLayout(row)
 
         # Overall size

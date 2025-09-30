@@ -71,7 +71,9 @@ class MonitoringWindow(QWidget):
         
         # Temperature with graph
         temp_box = QVBoxLayout()
-        temp_box.addWidget(QLabel("Temperature (°C) / Loading (%)"))
+        temp_label = QLabel("Temperature (°C) / Loading (%)")
+        temp_label.setStyleSheet("color: #9aa0a6;")  # Match the app's muted text color
+        temp_box.addWidget(temp_label)
         temp_box.addWidget(self._create_graph_placeholder())
         
         # Stats column
@@ -95,7 +97,9 @@ class MonitoringWindow(QWidget):
         gpu_metrics = QHBoxLayout()
         
         temp_box = QVBoxLayout()
-        temp_box.addWidget(QLabel("Temperature (°C) / Loading (%)"))
+        temp_label = QLabel("Temperature (°C) / Loading (%)")
+        temp_label.setStyleSheet("color: #9aa0a6;")  # Match the app's muted text color
+        temp_box.addWidget(temp_label)
         temp_box.addWidget(self._create_graph_placeholder())
         
         stats_box = QVBoxLayout()

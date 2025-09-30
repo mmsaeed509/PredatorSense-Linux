@@ -312,7 +312,7 @@ class CustomShapeWindow(QMainWindow):
             "Overclocking",
             "Fan Control",
             "Monitoring",
-            "Game Sync",
+            "Game and Apps Sync",
             "Battery and USB",
         ]
 
@@ -342,7 +342,7 @@ class CustomShapeWindow(QMainWindow):
             "Overclocking": Tab.OVERCLOCKING,
             "Fan Control": Tab.FAN_CONTROL,
             "Monitoring": Tab.MONITORING,
-            "Game Sync": Tab.GAME_SYNC,
+            "Game and Apps Sync": Tab.GAME_APP_SYNC,
             "Battery and USB": Tab.BATTERY_USB,
         }
         tab = mapping.get(name)
