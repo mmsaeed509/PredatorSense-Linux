@@ -309,7 +309,7 @@ class CustomShapeWindow(QMainWindow):
             "Fan Control",
             "Monitoring",
             "Game Sync",
-            "App Center",
+            "Battery and USB",
         ]
 
         self.menu_group = QButtonGroup(self)
@@ -339,7 +339,7 @@ class CustomShapeWindow(QMainWindow):
             "Fan Control": Tab.FAN_CONTROL,
             "Monitoring": Tab.MONITORING,
             "Game Sync": Tab.GAME_SYNC,
-            "App Center": Tab.APP_CENTER,
+            "Battery and USB": Tab.BATTERY_USB,
         }
         tab = mapping.get(name)
         if tab:

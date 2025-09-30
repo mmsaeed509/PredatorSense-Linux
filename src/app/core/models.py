@@ -8,7 +8,7 @@ class Tab(Enum):
     FAN_CONTROL = auto()
     MONITORING = auto()
     GAME_SYNC = auto()
-    APP_CENTER = auto()
+    BATTERY_USB = auto()
 
 
 class LightingProfile(Enum):

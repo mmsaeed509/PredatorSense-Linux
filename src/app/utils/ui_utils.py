@@ -199,9 +199,11 @@ class FanDial(QWidget):
         w, h = self.width(), self.height()
         size = min(w, h)
         cx, cy = w // 2, h // 2
-        # Make the overall blade ring smaller
-        outer_r = int(size * 0.25)
-        inner_r = int(size * 0.19)
+        # Make the overall blade ring smaller 
+        # circle radius size
+        outer_r = int(size * 0.40)
+        # Blades inner radius size
+        inner_r = int(size * 0.28)
 
         painter = QPainter(self)
         painter.setRenderHint(QPainter.Antialiasing)
