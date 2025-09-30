@@ -14,6 +14,7 @@ from app.ui.internal_window import InternalWindow
 from app.ui.fan_control_window import FanControlWindow
 from app.ui.settings_popup import SettingsPopup
 from app.ui.monitoring_window import MonitoringWindow
+from app.ui.battery_usb_window import BatteryUSBWindow
 from app.utils import ui_utils
 from config import WM_CLASS, WM_CLASS_2, FONTS_DIR, ICONS_DIR, DEFAULT_FONT_FAMILY
 from app.utils import x11_utils
@@ -49,6 +50,7 @@ class CustomShapeWindow(QMainWindow):
         self.internal_window = None
         self.fan_window = None
         self.monitoring_window = None
+        self.battery_usb_window = None
         self.current_content = None
         self.close_button = None
         self.settings_button = None
@@ -366,6 +368,10 @@ class CustomShapeWindow(QMainWindow):
         if self.monitoring_window is None:
             self.monitoring_window = MonitoringWindow(self, controller=self.controller)
 
+    def _ensureBatteryUSBWindow(self):
+        if self.battery_usb_window is None:
+            self.battery_usb_window = BatteryUSBWindow(self, controller=self.controller)
+
     def _swapContent(self, new_widget: QWidget):
         if self.current_content is new_widget:
             return
@@ -384,8 +390,11 @@ class CustomShapeWindow(QMainWindow):
         elif tab == Tab.MONITORING:
             self._ensureMonitoringWindow()
             self._swapContent(self.monitoring_window)
+        elif tab == Tab.BATTERY_USB:
+            self._ensureBatteryUSBWindow()
+            self._swapContent(self.battery_usb_window)
         else:
-            # Default to the Home internal window for all other tabs for now
+            # Default to the Home internal window for all other tabs
             self._swapContent(self.internal_window)
 
     def closeEvent(self, event):
