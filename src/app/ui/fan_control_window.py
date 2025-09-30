@@ -1,6 +1,7 @@
 from PyQt5.QtCore import Qt, QPoint
 from PyQt5.QtGui import QPainter, QColor, QBrush, QRegion, QPolygon, QPen, QFont
-from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QSizePolicy, QButtonGroup
+from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
+                          QPushButton, QSizePolicy, QButtonGroup, QSlider)
 from app.utils.ui_utils import FanDial, ModeButton
 from app.utils.config_utils import config_manager
 from app.core import CoreController
@@ -78,7 +79,7 @@ class FanControlWindow(QWidget):
         self.btn_max = ModeButton("Max")
         self.btn_custom = ModeButton("Custom")
         self.btn_auto.setChecked(True)
-        self.btn_custom.setEnabled(False)
+        self.btn_custom.setEnabled(True)  # Enable custom mode button
         
         # Map mode names to buttons for easier access
         self._mode_buttons = {
@@ -115,6 +116,83 @@ class FanControlWindow(QWidget):
 
         vbox.addLayout(rpm_row, 1)
 
+        # Add sliders for custom control
+        self.cpu_slider = QSlider(Qt.Horizontal)
+        self.gpu_slider = QSlider(Qt.Horizontal)
+        self._setup_slider(self.cpu_slider)
+        self._setup_slider(self.gpu_slider)
+        
+        # Add auto revert buttons
+        self.cpu_auto = QPushButton("Auto")
+        self.gpu_auto = QPushButton("Auto") 
+        self._setup_auto_button(self.cpu_auto)
+        self._setup_auto_button(self.gpu_auto)
+        
+        # Add sliders to layout
+        slider_box = QVBoxLayout()
+        
+        # Create styled labels
+        cpu_label = QLabel("CPU Fan:")
+        gpu_label = QLabel("GPU Fan:")
+        for label in (cpu_label, gpu_label):
+            label.setStyleSheet("color: #00B0C8; font-weight: bold;")
+            label.setFont(font_label)
+        
+        cpu_row = QHBoxLayout()
+        cpu_row.addWidget(cpu_label)
+        cpu_row.addWidget(self.cpu_slider)
+        cpu_row.addWidget(self.cpu_auto)
+        
+        gpu_row = QHBoxLayout()
+        gpu_row.addWidget(gpu_label)
+        gpu_row.addWidget(self.gpu_slider)
+        gpu_row.addWidget(self.gpu_auto)
+        
+        slider_box.addLayout(cpu_row)
+        slider_box.addLayout(gpu_row)
+        
+        vbox.addLayout(slider_box)
+        
+        # Connect signals
+        self.cpu_slider.valueChanged.connect(self._on_sliders_changed)
+        self.gpu_slider.valueChanged.connect(self._on_sliders_changed)
+        self.cpu_auto.clicked.connect(lambda: self._on_auto_clicked('cpu'))
+        self.gpu_auto.clicked.connect(lambda: self._on_auto_clicked('gpu'))
+
+    def _setup_slider(self, slider):
+        slider.setRange(0, 100)
+        slider.setValue(0)
+        slider.setEnabled(False)
+        slider.setStyleSheet("""
+            QSlider::groove:horizontal {
+                height: 8px;
+                background: #1a1a1a;
+                border: 1px solid #2a2a2a;
+                border-radius: 4px;
+            }
+            QSlider::handle:horizontal {
+                background: #00B0C8;
+                width: 18px;
+                margin: -5px 0;
+                border-radius: 9px;
+            }
+        """)
+
+    def _setup_auto_button(self, button):
+        button.setEnabled(False)
+        button.setStyleSheet("""
+            QPushButton {
+                background: #1a1a1a;
+                color: #cfcfcf;
+                border: 1px solid #2a2a2a;
+                border-radius: 4px;
+                padding: 4px 12px;
+            }
+            QPushButton:hover {
+                border-color: #00B0C8;
+            }
+        """)
+
     def setRpm(self, cpu_rpm: int, gpu_rpm: int):
         self.cpu_dial.setRpm(int(cpu_rpm))
         self.gpu_dial.setRpm(int(gpu_rpm))
@@ -132,15 +210,44 @@ class FanControlWindow(QWidget):
         self._current_mode = mode
         config_manager.set('fan_mode', mode)
         
+        # Enable/disable sliders based on mode
+        is_custom = (mode == 'custom')
+        self.cpu_slider.setEnabled(is_custom)
+        self.gpu_slider.setEnabled(is_custom)
+        self.cpu_auto.setEnabled(is_custom)
+        self.gpu_auto.setEnabled(is_custom)
+        
+        if not is_custom:
+            # Reset sliders when leaving custom mode
+            self.cpu_slider.setValue(0)
+            self.gpu_slider.setValue(0)
+
         # TODO: Apply the fan mode to the system
         # This would involve calling the appropriate controller method
         # For example: self.controller.set_fan_mode(mode)
     
     def _load_saved_mode(self):
-        """Load the saved fan mode from config and update UI."""
+        """Load the saved fan mode and slider values from config and update UI."""
         saved_mode = config_manager.get('fan_mode', 'auto')
+        
+        # Load saved slider values
+        cpu_speed = config_manager.get('cpu_fan_speed', 0)
+        gpu_speed = config_manager.get('gpu_fan_speed', 0)
+        
+        # Set slider values
+        self.cpu_slider.setValue(cpu_speed)
+        self.gpu_slider.setValue(gpu_speed)
+        
+        # Apply mode (this will enable/disable sliders as needed)
         self._on_mode_selected(saved_mode)
         
+        # If custom mode, apply saved speeds
+        if saved_mode == 'custom':
+            try:
+                self.controller.fans.set_custom(cpu_speed, gpu_speed)
+            except Exception as e:
+                print(f"Failed to restore custom speeds: {e}")
+
     def get_current_mode(self) -> str:
         """Get the currently selected fan mode."""
         return self._current_mode or 'auto'
@@ -157,3 +264,23 @@ class FanControlWindow(QWidget):
         painter.setPen(pen)
         painter.setBrush(Qt.NoBrush)
         painter.drawPolygon(self.polygon)
+
+    def _on_sliders_changed(self):
+        if self.get_current_mode() == 'custom':
+            try:
+                cpu_value = self.cpu_slider.value()
+                gpu_value = self.gpu_slider.value()
+                
+                # Save slider values to config
+                config_manager.set('cpu_fan_speed', cpu_value)
+                config_manager.set('gpu_fan_speed', gpu_value)
+                
+                self.controller.fans.set_custom(cpu_value, gpu_value)
+            except Exception as e:
+                print(f"Failed to set custom speeds: {e}")
+
+    def _on_auto_clicked(self, fan: str):
+        if fan == 'cpu':
+            self.cpu_slider.setValue(0)
+        else:
+            self.gpu_slider.setValue(0)
