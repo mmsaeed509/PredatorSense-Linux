@@ -6,6 +6,7 @@ from app.utils.ui_utils import CircularGauge
 from app.core import CoreController
 from app.core.metrics_service import CPUMetrics, GPUMetrics, SystemMetrics
 from app.ui.temperature_graph import TemperatureGraph
+from app.ui.cpu_details_popup import CPUDetailsPopup
 from config import DEFAULT_FONT_FAMILY
 
 class MonitoringWindow(QWidget):
@@ -23,6 +24,10 @@ class MonitoringWindow(QWidget):
         self.cpu_graph = None
         self.gpu_graph = None
         self.system_graph = None
+        
+        # CPU details popup
+        self.cpu_details_popup = None
+        self.current_cpu_metrics = None
         
         self._build_ui()
         self._connect_signals()
@@ -93,13 +98,14 @@ class MonitoringWindow(QWidget):
         cpu_title.setStyleSheet("color: #00B0C8; font-size: 16px; font-weight: bold;")
         self.cpu_labels['name'] = QLabel("Intel(R) Core(TM) i7-9750H CPU @ 2.60GHz")
         self.cpu_labels['name'].setStyleSheet("color: #9aa0a6; font-size: 12px;")
-        details_link = QLabel("Details")
-        details_link.setStyleSheet("color: #00B0C8; font-size: 12px; text-decoration: underline;")
+        self.details_link = QLabel("Details")
+        self.details_link.setStyleSheet("color: #00B0C8; font-size: 12px; text-decoration: underline;")
+        self.details_link.mousePressEvent = self._show_cpu_details
         
         cpu_header.addWidget(cpu_title)
         cpu_header.addWidget(self.cpu_labels['name'])
         cpu_header.addStretch()
-        cpu_header.addWidget(details_link)
+        cpu_header.addWidget(self.details_link)
         cpu_container.addLayout(cpu_header)
         
         # CPU Content
@@ -466,6 +472,9 @@ class MonitoringWindow(QWidget):
     
     def _update_cpu_metrics(self, cpu_metrics: CPUMetrics):
         """Update CPU metrics display."""
+        # Store current metrics for details popup
+        self.current_cpu_metrics = cpu_metrics
+        
         self.cpu_labels['name'].setText(cpu_metrics.name)
         
         # Update temperature and usage displays
@@ -494,6 +503,10 @@ class MonitoringWindow(QWidget):
         # Update CPU graph
         if self.cpu_graph:
             self.cpu_graph.add_data_point(cpu_metrics.temperature, cpu_metrics.usage)
+        
+        # Update details popup if it's open
+        if self.cpu_details_popup:
+            self.update_cpu_details_popup()
     
     def _update_gpu_metrics(self, gpu_metrics: GPUMetrics):
         """Update GPU metrics display."""
@@ -562,6 +575,69 @@ class MonitoringWindow(QWidget):
             self._update_cpu_metrics(cpu_metrics)
             self._update_gpu_metrics(gpu_metrics)
             self._update_system_metrics(system_metrics)
+    
+    def _show_cpu_details(self, event):
+        """Show the CPU details popup."""
+        if self.cpu_details_popup is None:
+            self.cpu_details_popup = CPUDetailsPopup(self)
+            self.cpu_details_popup.closed.connect(self._on_cpu_details_closed)
+        
+        # Calculate position relative to the Details link
+        if hasattr(self, 'details_link'):
+            # Get the global position of the Details link
+            link_global_pos = self.details_link.mapToGlobal(QPoint(0, 0))
+            link_center_x = link_global_pos.x() + self.details_link.width() // 2
+            
+            # Position popup below and to the left of the Details link
+            popup_x = link_global_pos.x() - 370  # Move left so arrow can point to Details (wider popup)
+            popup_y = link_global_pos.y() + self.details_link.height() + 10  # Below the link
+            
+            # Calculate arrow position relative to popup
+            arrow_x_offset = link_center_x - popup_x
+            
+            # Ensure popup stays within screen bounds
+            try:
+                from PyQt5.QtWidgets import QApplication
+                screen_geometry = QApplication.desktop().availableGeometry()
+                
+                # Adjust if popup would go off-screen
+                if popup_x < screen_geometry.left():
+                    arrow_x_offset += popup_x - screen_geometry.left() - 10
+                    popup_x = screen_geometry.left() + 10
+                elif popup_x + self.cpu_details_popup.width() > screen_geometry.right():
+                    arrow_x_offset += popup_x - (screen_geometry.right() - self.cpu_details_popup.width() - 10)
+                    popup_x = screen_geometry.right() - self.cpu_details_popup.width() - 10
+                
+                if popup_y + self.cpu_details_popup.height() > screen_geometry.bottom():
+                    popup_y = link_global_pos.y() - self.cpu_details_popup.height() - 10  # Above the link
+            except:
+                pass  # Fallback to original positioning if screen detection fails
+            
+            # Set arrow position and popup position
+            self.cpu_details_popup.set_arrow_position(arrow_x_offset)
+            self.cpu_details_popup.move(popup_x, popup_y)
+        else:
+            # Fallback positioning
+            global_pos = self.mapToGlobal(QPoint(0, 0))
+            popup_x = global_pos.x() + self.width() - 420
+            popup_y = global_pos.y() + 150
+            self.cpu_details_popup.move(popup_x, popup_y)
+        
+        # Update with current data
+        self.update_cpu_details_popup()
+        self.cpu_details_popup.show()
+    
+    def _on_cpu_details_closed(self):
+        """Handle CPU details popup being closed."""
+        self.cpu_details_popup = None
+    
+    def update_cpu_details_popup(self):
+        """Update the CPU details popup with current core data."""
+        if self.cpu_details_popup and self.current_cpu_metrics:
+            self.cpu_details_popup.update_core_data(
+                self.current_cpu_metrics.core_frequencies,
+                self.current_cpu_metrics.core_temperatures
+            )
 
     def paintEvent(self, event):
         painter = QPainter(self)
