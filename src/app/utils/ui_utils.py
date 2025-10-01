@@ -149,8 +149,8 @@ class FanDial(QWidget):
         self._spin_angle = 0.0
         # Spin model parameters
         self._rpm_max = 7000  # used to normalize rotational speed
-        self._deg_per_sec_max = 1080.0  # deg/sec at max RPM (3 rev/sec)
-        self._deg_per_sec_min = 180.0   # deg/sec floor to prevent stop feel
+        self._deg_per_sec_max = 720.0  # deg/sec at max RPM (2 rev/sec)
+        self._deg_per_sec_min = 60.0   # deg/sec minimum for smooth continuous rotation
         self._spin_rpm = float(self._target_rpm)  # smoothed rpm for rotation
         self._font_value = QFont(DEFAULT_FONT_FAMILY, 26, QFont.DemiBold)
         self._font_unit = QFont(DEFAULT_FONT_FAMILY, 10)
@@ -179,19 +179,28 @@ class FanDial(QWidget):
         # compute dt in seconds (time-based animation prevents stutter)
         elapsed_ms = self._clock.elapsed()
         self._clock.restart()
-        dt = max(0.001, float(elapsed_ms) / 1000.0)
+        dt = max(0.001, min(0.1, float(elapsed_ms) / 1000.0))  # Cap dt to prevent large jumps
+        
         # animate numeric value toward target smoothly
         if self._rpm != self._target_rpm:
             delta = self._target_rpm - self._rpm
             # faster convergence for big deltas, slower for small changes
             step = max(1, int(abs(delta) * 0.15))
             self._rpm += step if delta > 0 else -step
-        # smooth spin RPM toward target using time-based lerp
-        blend = max(0.0, min(1.0, dt * 4.0))  # ~250ms time constant
+        
+        # smooth spin RPM toward target using gentler time-based lerp
+        blend = max(0.0, min(1.0, dt * 2.0))  # ~500ms time constant for smoother transitions
         self._spin_rpm = (1.0 - blend) * self._spin_rpm + blend * float(self._target_rpm)
-        # rotation speed proportional to smoothed RPM (normalized)
-        rpm_norm = max(0.0, min(1.0, self._spin_rpm / float(self._rpm_max)))
-        deg_per_sec = self._deg_per_sec_min + (self._deg_per_sec_max - self._deg_per_sec_min) * rpm_norm
+        
+        # Always rotate at minimum speed for continuous motion, even at 0 RPM
+        if self._spin_rpm > 0:
+            # rotation speed proportional to smoothed RPM (normalized)
+            rpm_norm = max(0.0, min(1.0, self._spin_rpm / float(self._rpm_max)))
+            deg_per_sec = self._deg_per_sec_min + (self._deg_per_sec_max - self._deg_per_sec_min) * rpm_norm
+        else:
+            # Even at 0 RPM, maintain minimum rotation for visual continuity
+            deg_per_sec = self._deg_per_sec_min * 0.3  # Slow but continuous rotation
+        
         self._spin_angle = (self._spin_angle + deg_per_sec * dt) % 360.0
         self.update()
 
@@ -209,7 +218,7 @@ class FanDial(QWidget):
         painter.setRenderHint(QPainter.Antialiasing)
 
         # Rotating blades (segments) around the rim (outside area)
-        blades = 20
+        blades = 30
         # Shorter blades and inclined a bit
         blade_len = max(5, int((outer_r - inner_r) * 0.85))
         tilt = 14.0  # degrees of inclination
