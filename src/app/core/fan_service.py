@@ -25,7 +25,7 @@ class FanService(QObject):
         super().__init__(parent)
         self._timer = QTimer(self)
         self._timer.timeout.connect(self._poll)
-        self._timer.setInterval(1000)  # 1s
+        self._timer.setInterval(2000)  # 2s - reduced frequency for better performance
 
     # Lifecycle
     def start(self):

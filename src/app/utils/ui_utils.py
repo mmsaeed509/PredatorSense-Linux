@@ -37,7 +37,7 @@ class CircularGauge(QWidget):
         self._pen_width = max(6, int(pen_width))
         self._timer = QTimer(self)
         self._timer.timeout.connect(self._tick)
-        self._timer.setInterval(15)  # smooth animation
+        self._timer.setInterval(33)  # 30fps instead of 66fps for better performance
         self._font_title = QFont(DEFAULT_FONT_FAMILY, 10)
         self._font_value = QFont(DEFAULT_FONT_FAMILY, 24)
         self._font_unit = QFont(DEFAULT_FONT_FAMILY, 16)
@@ -149,30 +149,55 @@ class FanDial(QWidget):
         self._spin_angle = 0.0
         # Spin model parameters
         self._rpm_max = 7000  # used to normalize rotational speed
-        self._deg_per_sec_max = 720.0  # deg/sec at max RPM (2 rev/sec)
-        self._deg_per_sec_min = 60.0   # deg/sec minimum for smooth continuous rotation
+        self._deg_per_sec_max = 360.0  # deg/sec at max RPM (1 rev/sec) - reduced for performance
+        self._deg_per_sec_min = 30.0   # deg/sec minimum - reduced for performance
         self._spin_rpm = float(self._target_rpm)  # smoothed rpm for rotation
         self._font_value = QFont(DEFAULT_FONT_FAMILY, 26, QFont.DemiBold)
         self._font_unit = QFont(DEFAULT_FONT_FAMILY, 10)
         self._font_title = QFont(DEFAULT_FONT_FAMILY, 10)
         self.setMinimumSize(180, 180)
 
-        # Value animation timer
+        # Performance optimizations
+        self._last_angle = 0.0
+        self._needs_repaint = True
+        self._animation_active = False
+        
+        # Value animation timer - reduced frequency for better performance
         self._tick_timer = QTimer(self)
-        self._tick_timer.setInterval(16)  # ~60fps
+        self._tick_timer.setInterval(33)  # ~30fps instead of 60fps
         self._tick_timer.timeout.connect(self._on_tick)
-        self._tick_timer.start()
+        # Don't start timer immediately - only when needed
+        
         # High-resolution time delta
         self._clock = QElapsedTimer()
         self._clock.start()
 
     # API
     def setRpm(self, rpm: int):
-        self._target_rpm = max(0, int(rpm))
+        new_rpm = max(0, int(rpm))
+        if new_rpm != self._target_rpm:
+            self._target_rpm = new_rpm
+            self._start_animation_if_needed()
 
     def setTitle(self, title: str):
-        self._title = title
-        self.update()
+        if self._title != title:
+            self._title = title
+            self.update()
+    
+    def _start_animation_if_needed(self):
+        """Start animation timer only when there's actual work to do"""
+        if not self._animation_active and (self._rpm != self._target_rpm or self._target_rpm > 0):
+            self._animation_active = True
+            if not self._tick_timer.isActive():
+                self._tick_timer.start()
+    
+    def _stop_animation_if_idle(self):
+        """Stop animation timer when no changes are needed"""
+        if (self._rpm == self._target_rpm and self._target_rpm == 0 and 
+            abs(self._spin_angle - self._last_angle) < 0.1):
+            self._animation_active = False
+            if self._tick_timer.isActive():
+                self._tick_timer.stop()
 
     # Animation step
     def _on_tick(self):
@@ -181,28 +206,41 @@ class FanDial(QWidget):
         self._clock.restart()
         dt = max(0.001, min(0.1, float(elapsed_ms) / 1000.0))  # Cap dt to prevent large jumps
         
+        changed = False
+        
         # animate numeric value toward target smoothly
         if self._rpm != self._target_rpm:
             delta = self._target_rpm - self._rpm
             # faster convergence for big deltas, slower for small changes
             step = max(1, int(abs(delta) * 0.15))
             self._rpm += step if delta > 0 else -step
+            changed = True
         
         # smooth spin RPM toward target using gentler time-based lerp
+        old_spin_rpm = self._spin_rpm
         blend = max(0.0, min(1.0, dt * 2.0))  # ~500ms time constant for smoother transitions
         self._spin_rpm = (1.0 - blend) * self._spin_rpm + blend * float(self._target_rpm)
         
-        # Always rotate at minimum speed for continuous motion, even at 0 RPM
-        if self._spin_rpm > 0:
+        # Only rotate if there's meaningful RPM or we need visual continuity
+        if self._spin_rpm > 5 or self._target_rpm > 0:
             # rotation speed proportional to smoothed RPM (normalized)
             rpm_norm = max(0.0, min(1.0, self._spin_rpm / float(self._rpm_max)))
             deg_per_sec = self._deg_per_sec_min + (self._deg_per_sec_max - self._deg_per_sec_min) * rpm_norm
-        else:
-            # Even at 0 RPM, maintain minimum rotation for visual continuity
-            deg_per_sec = self._deg_per_sec_min * 0.3  # Slow but continuous rotation
+            
+            old_angle = self._spin_angle
+            self._spin_angle = (self._spin_angle + deg_per_sec * dt) % 360.0
+            
+            # Only repaint if angle changed significantly (reduces unnecessary repaints)
+            if abs(self._spin_angle - old_angle) > 1.0:
+                changed = True
         
-        self._spin_angle = (self._spin_angle + deg_per_sec * dt) % 360.0
-        self.update()
+        # Only update if something actually changed
+        if changed:
+            self._last_angle = self._spin_angle
+            self.update()
+        
+        # Stop animation if idle to save CPU
+        self._stop_animation_if_idle()
 
     def paintEvent(self, event):
         w, h = self.width(), self.height()
@@ -215,19 +253,23 @@ class FanDial(QWidget):
         inner_r = int(size * 0.28)
 
         painter = QPainter(self)
-        painter.setRenderHint(QPainter.Antialiasing)
-
+        # Only enable antialiasing for text, not for lines (performance optimization)
+        
         # Rotating blades (segments) around the rim (outside area)
-        blades = 30
+        # Reduced blade count for better performance
+        blades = 20  # Reduced from 30 to 16 for better performance
         # Shorter blades and inclined a bit
         blade_len = max(5, int((outer_r - inner_r) * 0.85))
         tilt = 14.0  # degrees of inclination
-        blade_pen = QPen(QColor(110, 110, 110), 5)
+        blade_pen = QPen(QColor(110, 110, 110), 4)  # Slightly thinner for performance
         blade_pen.setCapStyle(Qt.RoundCap)
         painter.setPen(blade_pen)
+        
+        # Pre-calculate math for performance
         from math import cos, sin, radians
+        blade_step = 360.0 / blades
         for i in range(blades):
-            a = (self._spin_angle + i * (360.0 / blades))
+            a = (self._spin_angle + i * blade_step)
             ang_outer = radians(a)
             ang_inner = radians(a + tilt)
             x1 = cx + (outer_r - 5) * cos(ang_outer)
@@ -249,6 +291,9 @@ class FanDial(QWidget):
         painter.setBrush(Qt.NoBrush)
         painter.drawEllipse(cx - ring_r, cy - ring_r, 2 * ring_r, 2 * ring_r)
 
+        # Enable antialiasing only for text rendering
+        painter.setRenderHint(QPainter.Antialiasing)
+        
         # Center text: value and unit
         painter.setPen(QColor(230, 230, 230))
         painter.setFont(self._font_value)
@@ -347,7 +392,7 @@ class ModeButton(QWidget):
 
     def paintEvent(self, event):
         p = QPainter(self)
-        p.setRenderHint(QPainter.Antialiasing)
+        # Only enable antialiasing for text, not for shapes (performance optimization)
         poly = self._panelPolygon()
 
         # base panel
@@ -375,7 +420,8 @@ class ModeButton(QWidget):
             p.setFont(self._font_sub)
             p.drawText(cx + 4, cy + 6, self._subglyph)
 
-        # caption under
+        # caption under - enable antialiasing only for text
+        p.setRenderHint(QPainter.Antialiasing)
         p.setFont(self._font_caption)
         if not self.isEnabled():
             p.setPen(QColor(120, 120, 120))

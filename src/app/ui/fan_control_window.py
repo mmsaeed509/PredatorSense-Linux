@@ -245,8 +245,19 @@ class FanControlWindow(QWidget):
         """)
 
     def setRpm(self, cpu_rpm: int, gpu_rpm: int):
-        self.cpu_dial.setRpm(int(cpu_rpm))
-        self.gpu_dial.setRpm(int(gpu_rpm))
+        # Only update if values actually changed to avoid unnecessary repaints
+        cpu_rpm = int(cpu_rpm)
+        gpu_rpm = int(gpu_rpm)
+        
+        if hasattr(self.cpu_dial, '_rpm') and self.cpu_dial._rpm != cpu_rpm:
+            self.cpu_dial.setRpm(cpu_rpm)
+        elif not hasattr(self.cpu_dial, '_rpm'):
+            self.cpu_dial.setRpm(cpu_rpm)
+            
+        if hasattr(self.gpu_dial, '_rpm') and self.gpu_dial._rpm != gpu_rpm:
+            self.gpu_dial.setRpm(gpu_rpm)
+        elif not hasattr(self.gpu_dial, '_rpm'):
+            self.gpu_dial.setRpm(gpu_rpm)
         
     def _on_mode_selected(self, mode: str):
         """Handle mode selection and update UI and settings."""
