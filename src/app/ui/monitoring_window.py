@@ -96,7 +96,7 @@ class MonitoringWindow(QWidget):
         cpu_header = QHBoxLayout()
         cpu_title = QLabel("CPU")
         cpu_title.setStyleSheet("color: #00B0C8; font-size: 16px; font-weight: bold;")
-        self.cpu_labels['name'] = QLabel("Intel(R) Core(TM) i7-9750H CPU @ 2.60GHz")
+        self.cpu_labels['name'] = QLabel("?")
         self.cpu_labels['name'].setStyleSheet("color: #9aa0a6; font-size: 12px;")
         self.details_link = QLabel("Details")
         self.details_link.setStyleSheet("color: #00B0C8; font-size: 12px; text-decoration: underline;")
@@ -155,9 +155,9 @@ class MonitoringWindow(QWidget):
         cpu_stats.setSpacing(15)
         cpu_stats.setAlignment(Qt.AlignTop)
         
-        self.cpu_labels['fan_speed'] = self._create_stat_item("Fan speed", "3540 RPM")
-        self.cpu_labels['frequency'] = self._create_stat_item("Frequency", "3760 MHz")
-        self.cpu_labels['voltage'] = self._create_stat_item("Voltage", "1.091 V")
+        self.cpu_labels['fan_speed'] = self._create_stat_item("Fan speed", "? RPM")
+        self.cpu_labels['frequency'] = self._create_stat_item("Frequency", "? MHz")
+        self.cpu_labels['voltage'] = self._create_stat_item("Voltage", "? V")
         
         cpu_stats.addLayout(self.cpu_labels['fan_speed']['layout'])
         cpu_stats.addLayout(self.cpu_labels['frequency']['layout'])
@@ -177,7 +177,7 @@ class MonitoringWindow(QWidget):
         gpu_header = QHBoxLayout()
         gpu_title = QLabel("GPU")
         gpu_title.setStyleSheet("color: #00B0C8; font-size: 16px; font-weight: bold;")
-        self.gpu_labels['name'] = QLabel("GeForce GTX 1660 Ti")
+        self.gpu_labels['name'] = QLabel("?")
         self.gpu_labels['name'].setStyleSheet("color: #9aa0a6; font-size: 12px;")
         
         gpu_header.addWidget(gpu_title)
@@ -577,55 +577,23 @@ class MonitoringWindow(QWidget):
             self._update_system_metrics(system_metrics)
     
     def _show_cpu_details(self, event):
-        """Show the CPU details popup."""
+        """Show the CPU details popup using the same pattern as settings popup."""
         if self.cpu_details_popup is None:
             self.cpu_details_popup = CPUDetailsPopup(self)
             self.cpu_details_popup.closed.connect(self._on_cpu_details_closed)
         
-        # Calculate position relative to the Details link
-        if hasattr(self, 'details_link'):
-            # Get the global position of the Details link
-            link_global_pos = self.details_link.mapToGlobal(QPoint(0, 0))
-            link_center_x = link_global_pos.x() + self.details_link.width() // 2
-            
-            # Position popup below and to the left of the Details link
-            popup_x = link_global_pos.x() - 370  # Move left so arrow can point to Details (wider popup)
-            popup_y = link_global_pos.y() + self.details_link.height() + 10  # Below the link
-            
-            # Calculate arrow position relative to popup
-            arrow_x_offset = link_center_x - popup_x
-            
-            # Ensure popup stays within screen bounds
-            try:
-                from PyQt5.QtWidgets import QApplication
-                screen_geometry = QApplication.desktop().availableGeometry()
-                
-                # Adjust if popup would go off-screen
-                if popup_x < screen_geometry.left():
-                    arrow_x_offset += popup_x - screen_geometry.left() - 10
-                    popup_x = screen_geometry.left() + 10
-                elif popup_x + self.cpu_details_popup.width() > screen_geometry.right():
-                    arrow_x_offset += popup_x - (screen_geometry.right() - self.cpu_details_popup.width() - 10)
-                    popup_x = screen_geometry.right() - self.cpu_details_popup.width() - 10
-                
-                if popup_y + self.cpu_details_popup.height() > screen_geometry.bottom():
-                    popup_y = link_global_pos.y() - self.cpu_details_popup.height() - 10  # Above the link
-            except:
-                pass  # Fallback to original positioning if screen detection fails
-            
-            # Set arrow position and popup position
-            self.cpu_details_popup.set_arrow_position(arrow_x_offset)
-            self.cpu_details_popup.move(popup_x, popup_y)
-        else:
-            # Fallback positioning
-            global_pos = self.mapToGlobal(QPoint(0, 0))
-            popup_x = global_pos.x() + self.width() - 420
-            popup_y = global_pos.y() + 150
-            self.cpu_details_popup.move(popup_x, popup_y)
-        
-        # Update with current data
+        # Update with current data before showing
         self.update_cpu_details_popup()
-        self.cpu_details_popup.show()
+        
+        # Position popup similar to settings popup
+        try:
+            # Get the global position of the Details link (similar to settings button)
+            link_center = self.details_link.mapToGlobal(self.details_link.rect().center())
+            self.cpu_details_popup.showAt(link_center)
+        except Exception:
+            # Fallback: show near the Details link
+            fallback_pos = self.mapToGlobal(QPoint(self.width() - 200, 100))
+            self.cpu_details_popup.showAt(fallback_pos)
     
     def _on_cpu_details_closed(self):
         """Handle CPU details popup being closed."""

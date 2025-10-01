@@ -3,7 +3,7 @@
 
 import sys
 import os
-sys.path.append(os.path.join(os.path.dirname(__file__), 'src'))
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'src'))
 
 from app.core.metrics_service import MetricsService
 from PyQt5.QtCore import QCoreApplication

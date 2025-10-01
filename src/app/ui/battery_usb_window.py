@@ -126,7 +126,7 @@ class BatteryUSBWindow(QWidget):
 
         # Info label
         info = QLabel(
-            "🔋 Battery Charging Limiter\n\n"
+            "󰂁 Battery Charging Limiter\n\n"
             "Limits battery charging to 80% capacity.\n"
             "This helps preserve battery health when the laptop\n"
             "is primarily used while plugged into AC power.\n\n"

@@ -305,20 +305,22 @@ class MetricsService(QObject):
             if result.returncode == 0:
                 data = json.loads(result.stdout)
                 
-                # Look for fan speeds
-                for device, sensors in data.items():
-                    if isinstance(sensors, dict):
-                        for sensor_name, sensor_data in sensors.items():
-                            if 'fan' in sensor_name.lower() and isinstance(sensor_data, dict):
-                                for key, value in sensor_data.items():
-                                    if key.endswith('_input') and isinstance(value, (int, float)):
-                                        cpu_metrics.fan_speed = int(value)
-                                        break
-                            elif 'in' in sensor_name.lower() and isinstance(sensor_data, dict):
-                                for key, value in sensor_data.items():
-                                    if key.endswith('_input') and isinstance(value, (int, float)):
-                                        cpu_metrics.voltage = round(value, 3)
-                                        break
+                # Look specifically for acer-isa-0ace device and fan1 (CPU fan)
+                for device_name, device_data in data.items():
+                    if 'acer-isa-0ace' in device_name.lower() and isinstance(device_data, dict):
+                        for sensor_name, sensor_data in device_data.items():
+                            if isinstance(sensor_data, dict):
+                                if 'fan1' in sensor_name.lower():
+                                    for key, value in sensor_data.items():
+                                        if key.endswith('_input') and isinstance(value, (int, float)):
+                                            cpu_metrics.fan_speed = int(value)
+                                            break
+                                elif 'in' in sensor_name.lower():
+                                    for key, value in sensor_data.items():
+                                        if key.endswith('_input') and isinstance(value, (int, float)):
+                                            cpu_metrics.voltage = round(value, 3)
+                                            break
+                        break
         except:
             pass
         
@@ -481,50 +483,30 @@ class MetricsService(QObject):
         except:
             pass
         
-        # Try to get more accurate fan speed from sensors
+        # Try to get GPU fan speed from sensors (fan2 in acer device)
         if gpu_metrics.fan_speed == 0:
             try:
-                sensors_result = subprocess.run(['sensors'], capture_output=True, text=True, timeout=2)
-                if sensors_result.returncode == 0:
-                    import re
-                    for sensor_line in sensors_result.stdout.split('\n'):
-                        # Look for GPU-related fan entries
-                        if any(keyword in sensor_line.lower() for keyword in ['gpu', 'nvidia', 'geforce']) and 'rpm' in sensor_line.lower():
-                            rpm_match = re.search(r'(\d+)\s*RPM', sensor_line)
-                            if rpm_match:
-                                gpu_metrics.fan_speed = int(rpm_match.group(1))
+                result = subprocess.run(['sensors', '-j'], capture_output=True, text=True, timeout=2)
+                if result.returncode == 0:
+                    data = json.loads(result.stdout)
+                    
+                    # Look specifically for acer-isa-0ace device and fan2 (GPU fan)
+                    for device_name, device_data in data.items():
+                        if 'acer-isa-0ace' in device_name.lower() and isinstance(device_data, dict):
+                            for sensor_name, sensor_data in device_data.items():
+                                if 'fan2' in sensor_name.lower() and isinstance(sensor_data, dict):
+                                    for key, value in sensor_data.items():
+                                        if key.endswith('_input') and isinstance(value, (int, float)):
+                                            gpu_metrics.fan_speed = int(value)
+                                            break
+                                    if gpu_metrics.fan_speed > 0:
+                                        break
+                            if gpu_metrics.fan_speed > 0:
                                 break
-                        # Also check for generic fan entries that might be GPU fans
-                        elif 'fan' in sensor_line.lower() and 'rpm' in sensor_line.lower():
-                            rpm_match = re.search(r'(\d+)\s*RPM', sensor_line)
-                            if rpm_match:
-                                rpm_value = int(rpm_match.group(1))
-                                # If it's in a reasonable GPU fan range and we don't have CPU fan speed yet
-                                if 1500 <= rpm_value <= 5000 and gpu_metrics.fan_speed == 0:
-                                    gpu_metrics.fan_speed = rpm_value
             except:
                 pass
         
-        # Provide realistic fan speed based on temperature and usage if still 0
-        if gpu_metrics.fan_speed == 0:
-            # For GTX 1660 Ti and similar GPUs, provide realistic fan speeds
-            if gpu_metrics.temperature > 0 or gpu_metrics.usage > 0:
-                # Base fan speed calculation on temperature and usage
-                temp_factor = max(0, min(1, (gpu_metrics.temperature - 30) / 50))  # 30-80°C range
-                usage_factor = gpu_metrics.usage / 100
-                
-                # Combine factors with temperature having more weight
-                combined_factor = (temp_factor * 0.7) + (usage_factor * 0.3)
-                
-                # GTX 1660 Ti typical fan curve: 1800-4000 RPM
-                if combined_factor > 0.1:  # Only show fan speed if there's some load
-                    gpu_metrics.fan_speed = int(1800 + (combined_factor * 2200))
-                else:
-                    # Very low load, might be in zero-RPM mode but show minimal speed
-                    gpu_metrics.fan_speed = 1800  # Minimum idle speed
-            else:
-                # No data available, provide a reasonable default for display
-                gpu_metrics.fan_speed = 3960  # Match the screenshot value
+        # Keep fan speed as 0 if not detected (realistic for idle GPUs with zero-RPM mode)
         
         # Try AMD tools
         try:
