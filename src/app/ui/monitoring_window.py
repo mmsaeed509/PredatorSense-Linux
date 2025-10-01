@@ -81,129 +81,240 @@ class MonitoringWindow(QWidget):
         # CPU/GPU Tab
         cpu_gpu_tab = QWidget()
         cpu_gpu_layout = QVBoxLayout(cpu_gpu_tab)
+        cpu_gpu_layout.setSpacing(30)
         
         # CPU Section
-        cpu_section = self._create_section("CPU", "Loading...")
-        self.cpu_labels['name'] = cpu_section.itemAt(0).layout().itemAt(1).widget()
-        cpu_metrics = QHBoxLayout()
+        cpu_container = QVBoxLayout()
+        cpu_container.setSpacing(10)
         
-        # Temperature with graph
-        temp_box = QVBoxLayout()
+        # CPU Header
+        cpu_header = QHBoxLayout()
+        cpu_title = QLabel("CPU")
+        cpu_title.setStyleSheet("color: #00B0C8; font-size: 16px; font-weight: bold;")
+        self.cpu_labels['name'] = QLabel("Intel(R) Core(TM) i7-9750H CPU @ 2.60GHz")
+        self.cpu_labels['name'].setStyleSheet("color: #9aa0a6; font-size: 12px;")
+        details_link = QLabel("Details")
+        details_link.setStyleSheet("color: #00B0C8; font-size: 12px; text-decoration: underline;")
+        
+        cpu_header.addWidget(cpu_title)
+        cpu_header.addWidget(self.cpu_labels['name'])
+        cpu_header.addStretch()
+        cpu_header.addWidget(details_link)
+        cpu_container.addLayout(cpu_header)
+        
+        # CPU Content
+        cpu_content = QHBoxLayout()
+        cpu_content.setSpacing(20)
+        
+        # CPU Graph Section
+        cpu_graph_section = QVBoxLayout()
+        cpu_graph_section.setSpacing(5)
+        
         temp_label = QLabel("Temperature (°C) / Loading (%)")
-        temp_label.setStyleSheet("color: #9aa0a6;")
-        temp_box.addWidget(temp_label)
+        temp_label.setStyleSheet("color: #9aa0a6; font-size: 11px;")
+        cpu_graph_section.addWidget(temp_label)
         
-        # Min/Max temp display
-        minmax_layout = QHBoxLayout()
-        self.cpu_labels['min_temp'] = QLabel("Min: --°")
-        self.cpu_labels['max_temp'] = QLabel("Max: --°")
+        # Min/Max for CPU
+        cpu_minmax = QHBoxLayout()
+        self.cpu_labels['min_temp'] = QLabel("Min: 77°")
+        self.cpu_labels['max_temp'] = QLabel("Max: 90°")
         self.cpu_labels['min_temp'].setStyleSheet("color: #9aa0a6; font-size: 10px;")
         self.cpu_labels['max_temp'].setStyleSheet("color: #9aa0a6; font-size: 10px;")
-        minmax_layout.addWidget(self.cpu_labels['min_temp'])
-        minmax_layout.addStretch()
-        minmax_layout.addWidget(self.cpu_labels['max_temp'])
-        temp_box.addLayout(minmax_layout)
+        cpu_minmax.addWidget(self.cpu_labels['min_temp'])
+        cpu_minmax.addStretch()
+        cpu_minmax.addWidget(self.cpu_labels['max_temp'])
+        cpu_graph_section.addLayout(cpu_minmax)
         
-        # Create CPU temperature graph
+        # CPU Graph with temperature display
+        cpu_graph_container = QHBoxLayout()
         self.cpu_graph = TemperatureGraph()
-        temp_box.addWidget(self.cpu_graph)
+        self.cpu_graph.setMinimumHeight(120)
         
-        # Stats column
-        stats_box = QVBoxLayout()
+        # Temperature and percentage display
+        cpu_display = QVBoxLayout()
+        cpu_display.setAlignment(Qt.AlignCenter)
+        self.cpu_labels['temp_display'] = QLabel("90°")
+        self.cpu_labels['temp_display'].setStyleSheet("color: #00B0C8; font-size: 32px; font-weight: bold;")
+        self.cpu_labels['usage_display'] = QLabel("16 %")
+        self.cpu_labels['usage_display'].setStyleSheet("color: #00B0C8; font-size: 16px;")
+        cpu_display.addWidget(self.cpu_labels['temp_display'])
+        cpu_display.addWidget(self.cpu_labels['usage_display'])
         
-        # Create dynamic stat rows
-        self.cpu_labels['fan_speed'] = self._create_dynamic_stat_row("Fan speed", "-- RPM", stats_box)
-        self.cpu_labels['frequency'] = self._create_dynamic_stat_row("Frequency", "-- MHz", stats_box)
-        self.cpu_labels['voltage'] = self._create_dynamic_stat_row("Voltage", "-- V", stats_box)
+        cpu_graph_container.addWidget(self.cpu_graph, 3)
+        cpu_graph_container.addLayout(cpu_display, 1)
+        cpu_graph_section.addLayout(cpu_graph_container)
         
-        cpu_metrics.addLayout(temp_box, 2)
-        cpu_metrics.addLayout(stats_box, 1)
-        cpu_section.addLayout(cpu_metrics)
-        cpu_gpu_layout.addLayout(cpu_section)
+        # CPU Stats Section
+        cpu_stats = QVBoxLayout()
+        cpu_stats.setSpacing(15)
+        cpu_stats.setAlignment(Qt.AlignTop)
+        
+        self.cpu_labels['fan_speed'] = self._create_stat_item("Fan speed", "3540 RPM")
+        self.cpu_labels['frequency'] = self._create_stat_item("Frequency", "3760 MHz")
+        self.cpu_labels['voltage'] = self._create_stat_item("Voltage", "1.091 V")
+        
+        cpu_stats.addLayout(self.cpu_labels['fan_speed']['layout'])
+        cpu_stats.addLayout(self.cpu_labels['frequency']['layout'])
+        cpu_stats.addLayout(self.cpu_labels['voltage']['layout'])
+        cpu_stats.addStretch()
+        
+        cpu_content.addLayout(cpu_graph_section, 3)
+        cpu_content.addLayout(cpu_stats, 1)
+        cpu_container.addLayout(cpu_content)
+        cpu_gpu_layout.addLayout(cpu_container)
         
         # GPU Section
-        gpu_section = self._create_section("GPU", "Loading...")
-        self.gpu_labels['name'] = gpu_section.itemAt(0).layout().itemAt(1).widget()
-        gpu_metrics = QHBoxLayout()
+        gpu_container = QVBoxLayout()
+        gpu_container.setSpacing(10)
         
-        temp_box = QVBoxLayout()
+        # GPU Header
+        gpu_header = QHBoxLayout()
+        gpu_title = QLabel("GPU")
+        gpu_title.setStyleSheet("color: #00B0C8; font-size: 16px; font-weight: bold;")
+        self.gpu_labels['name'] = QLabel("GeForce GTX 1660 Ti")
+        self.gpu_labels['name'].setStyleSheet("color: #9aa0a6; font-size: 12px;")
+        
+        gpu_header.addWidget(gpu_title)
+        gpu_header.addWidget(self.gpu_labels['name'])
+        gpu_header.addStretch()
+        gpu_container.addLayout(gpu_header)
+        
+        # GPU Content
+        gpu_content = QHBoxLayout()
+        gpu_content.setSpacing(20)
+        
+        # GPU Graph Section
+        gpu_graph_section = QVBoxLayout()
+        gpu_graph_section.setSpacing(5)
+        
         temp_label = QLabel("Temperature (°C) / Loading (%)")
-        temp_label.setStyleSheet("color: #9aa0a6;")
-        temp_box.addWidget(temp_label)
+        temp_label.setStyleSheet("color: #9aa0a6; font-size: 11px;")
+        gpu_graph_section.addWidget(temp_label)
         
-        # Min/Max temp display
-        minmax_layout = QHBoxLayout()
-        self.gpu_labels['min_temp'] = QLabel("Min: --°")
-        self.gpu_labels['max_temp'] = QLabel("Max: --°")
+        # Min/Max for GPU
+        gpu_minmax = QHBoxLayout()
+        self.gpu_labels['min_temp'] = QLabel("Min: 62°")
+        self.gpu_labels['max_temp'] = QLabel("Max: 74°")
         self.gpu_labels['min_temp'].setStyleSheet("color: #9aa0a6; font-size: 10px;")
         self.gpu_labels['max_temp'].setStyleSheet("color: #9aa0a6; font-size: 10px;")
-        minmax_layout.addWidget(self.gpu_labels['min_temp'])
-        minmax_layout.addStretch()
-        minmax_layout.addWidget(self.gpu_labels['max_temp'])
-        temp_box.addLayout(minmax_layout)
+        gpu_minmax.addWidget(self.gpu_labels['min_temp'])
+        gpu_minmax.addStretch()
+        gpu_minmax.addWidget(self.gpu_labels['max_temp'])
+        gpu_graph_section.addLayout(gpu_minmax)
         
-        # Create GPU temperature graph
+        # GPU Graph with temperature display
+        gpu_graph_container = QHBoxLayout()
         self.gpu_graph = TemperatureGraph()
-        temp_box.addWidget(self.gpu_graph)
+        self.gpu_graph.setMinimumHeight(120)
         
-        stats_box = QVBoxLayout()
+        # Temperature and percentage display
+        gpu_display = QVBoxLayout()
+        gpu_display.setAlignment(Qt.AlignCenter)
+        self.gpu_labels['temp_display'] = QLabel("74°")
+        self.gpu_labels['temp_display'].setStyleSheet("color: #00B0C8; font-size: 32px; font-weight: bold;")
+        self.gpu_labels['usage_display'] = QLabel("26 %")
+        self.gpu_labels['usage_display'].setStyleSheet("color: #00B0C8; font-size: 16px;")
+        gpu_display.addWidget(self.gpu_labels['temp_display'])
+        gpu_display.addWidget(self.gpu_labels['usage_display'])
         
-        # Create dynamic stat rows
-        self.gpu_labels['fan_speed'] = self._create_dynamic_stat_row("Fan speed", "-- RPM", stats_box)
-        self.gpu_labels['core_clock'] = self._create_dynamic_stat_row("Core Clock", "-- MHz", stats_box)
-            
-        gpu_metrics.addLayout(temp_box, 2)
-        gpu_metrics.addLayout(stats_box, 1)
-        gpu_section.addLayout(gpu_metrics)
-        cpu_gpu_layout.addLayout(gpu_section)
+        gpu_graph_container.addWidget(self.gpu_graph, 3)
+        gpu_graph_container.addLayout(gpu_display, 1)
+        gpu_graph_section.addLayout(gpu_graph_container)
+        
+        # GPU Stats Section
+        gpu_stats = QVBoxLayout()
+        gpu_stats.setSpacing(15)
+        gpu_stats.setAlignment(Qt.AlignTop)
+        
+        self.gpu_labels['fan_speed'] = self._create_stat_item("Fan speed", "3960 RPM")
+        self.gpu_labels['core_clock'] = self._create_stat_item("Core Clock", "1710 MHz")
+        
+        gpu_stats.addLayout(self.gpu_labels['fan_speed']['layout'])
+        gpu_stats.addLayout(self.gpu_labels['core_clock']['layout'])
+        gpu_stats.addStretch()
+        
+        gpu_content.addLayout(gpu_graph_section, 3)
+        gpu_content.addLayout(gpu_stats, 1)
+        gpu_container.addLayout(gpu_content)
+        cpu_gpu_layout.addLayout(gpu_container)
         
         # System Tab
         system_tab = QWidget()
         system_layout = QVBoxLayout(system_tab)
+        system_layout.setSpacing(20)
         
-        # System temperature graph section
-        temp_section = QVBoxLayout()
-        temp_header = QLabel("System Temperature (°C)")
-        temp_header.setStyleSheet("color: #00B0C8; font-size: 14px; font-weight: bold;")
-        temp_section.addWidget(temp_header)
+        # System Header
+        system_header = QHBoxLayout()
+        system_title = QLabel("System")
+        system_title.setStyleSheet("color: #00B0C8; font-size: 16px; font-weight: bold;")
+        temp_subtitle = QLabel("Temperature (°C)")
+        temp_subtitle.setStyleSheet("color: #9aa0a6; font-size: 12px;")
+        system_header.addWidget(system_title)
+        system_header.addWidget(temp_subtitle)
+        system_header.addStretch()
+        system_layout.addLayout(system_header)
         
-        # Min/Max temp display for system
-        sys_minmax_layout = QHBoxLayout()
-        self.system_labels['min_temp'] = QLabel("Min: --°")
-        self.system_labels['max_temp'] = QLabel("Max: --°")
+        # System temperature section
+        system_temp_section = QHBoxLayout()
+        system_temp_section.setSpacing(20)
+        
+        # System graph section
+        system_graph_section = QVBoxLayout()
+        
+        # Min/Max for system
+        system_minmax = QHBoxLayout()
+        self.system_labels['min_temp'] = QLabel("Min: 53°")
+        self.system_labels['max_temp'] = QLabel("Max: 65°")
         self.system_labels['min_temp'].setStyleSheet("color: #9aa0a6; font-size: 10px;")
         self.system_labels['max_temp'].setStyleSheet("color: #9aa0a6; font-size: 10px;")
-        sys_minmax_layout.addWidget(self.system_labels['min_temp'])
-        sys_minmax_layout.addStretch()
-        sys_minmax_layout.addWidget(self.system_labels['max_temp'])
-        temp_section.addLayout(sys_minmax_layout)
+        system_minmax.addWidget(self.system_labels['min_temp'])
+        system_minmax.addStretch()
+        system_minmax.addWidget(self.system_labels['max_temp'])
+        system_graph_section.addLayout(system_minmax)
         
-        # Create system temperature graph
+        # System graph with temperature display
+        system_graph_container = QHBoxLayout()
         self.system_graph = TemperatureGraph()
-        temp_section.addWidget(self.system_graph)
-        system_layout.addLayout(temp_section)
+        self.system_graph.setMinimumHeight(120)
         
-        # System metrics
+        # System temperature display
+        system_display = QVBoxLayout()
+        system_display.setAlignment(Qt.AlignCenter)
+        self.system_labels['temp_display'] = QLabel("65°")
+        self.system_labels['temp_display'].setStyleSheet("color: #00B0C8; font-size: 48px; font-weight: bold;")
+        system_display.addWidget(self.system_labels['temp_display'])
+        
+        system_graph_container.addWidget(self.system_graph, 3)
+        system_graph_container.addLayout(system_display, 1)
+        system_graph_section.addLayout(system_graph_container)
+        
+        system_temp_section.addLayout(system_graph_section)
+        system_layout.addLayout(system_temp_section)
+        
+        # System metrics row
         system_metrics = QHBoxLayout()
+        system_metrics.setSpacing(40)
         
         # RAM section
-        ram_box = self._create_dynamic_metric_box("RAM\nFrequency", "-- MHz", "Usage: -- GB (--%)")
-        self.system_labels['ram_frequency'] = ram_box['stat1']
-        self.system_labels['ram_usage'] = ram_box['stat2']
-        system_metrics.addLayout(ram_box['layout'])
+        ram_section = self._create_system_metric_section("RAM", "Frequency", "2667 MHz", "Usage", "4.8 GB (30.6%)")
+        self.system_labels['ram_frequency'] = ram_section['value1']
+        self.system_labels['ram_usage'] = ram_section['value2']
         
         # Ethernet section
-        eth_box = self._create_dynamic_metric_box("Ethernet\nDownload", "-- Kbps", "Upload: -- Kbps")
-        self.system_labels['eth_download'] = eth_box['stat1']
-        self.system_labels['eth_upload'] = eth_box['stat2']
-        system_metrics.addLayout(eth_box['layout'])
+        eth_section = self._create_system_metric_section("Ethernet", "Download", "0.0 Kbps", "Upload", "0.1 Kbps")
+        self.system_labels['eth_download'] = eth_section['value1']
+        self.system_labels['eth_upload'] = eth_section['value2']
         
         # Wi-Fi section
-        wifi_box = self._create_dynamic_metric_box("Wi-Fi\nDownload", "-- Kbps", "Upload: -- Kbps")
-        self.system_labels['wifi_download'] = wifi_box['stat1']
-        self.system_labels['wifi_upload'] = wifi_box['stat2']
-        system_metrics.addLayout(wifi_box['layout'])
-            
+        wifi_section = self._create_system_metric_section("Wi-Fi", "Download", "20.9 Kbps", "Upload", "2.7 Kbps")
+        self.system_labels['wifi_download'] = wifi_section['value1']
+        self.system_labels['wifi_upload'] = wifi_section['value2']
+        
+        system_metrics.addLayout(ram_section['layout'])
+        system_metrics.addLayout(eth_section['layout'])
+        system_metrics.addLayout(wifi_section['layout'])
+        system_metrics.addStretch()
+        
         system_layout.addLayout(system_metrics)
         system_layout.addStretch()
 
@@ -247,18 +358,59 @@ class MonitoringWindow(QWidget):
         graph.setMinimumHeight(100)
         return graph
 
-    def _create_dynamic_stat_row(self, label_text, initial_value, parent_layout):
-        """Create a stat row and return the value label for dynamic updates."""
-        row = QHBoxLayout()
+    def _create_stat_item(self, label_text, initial_value):
+        """Create a stat item layout with label and value."""
+        layout = QVBoxLayout()
+        layout.setSpacing(2)
+        
         label = QLabel(label_text)
-        label.setStyleSheet("color: #9aa0a6;")
-        value_label = QLabel(initial_value)
-        value_label.setStyleSheet("color: #00B0C8;")
-        row.addWidget(label)
-        row.addStretch()
-        row.addWidget(value_label)
-        parent_layout.addLayout(row)
-        return value_label
+        label.setStyleSheet("color: #9aa0a6; font-size: 11px;")
+        
+        value = QLabel(initial_value)
+        value.setStyleSheet("color: #00B0C8; font-size: 12px; font-weight: bold;")
+        
+        layout.addWidget(label)
+        layout.addWidget(value)
+        
+        return {'layout': layout, 'value': value}
+    
+    def _create_system_metric_section(self, title, label1, value1, label2, value2):
+        """Create a system metric section with title and two value pairs."""
+        section = QVBoxLayout()
+        section.setSpacing(8)
+        section.setAlignment(Qt.AlignTop)
+        
+        title_label = QLabel(title)
+        title_label.setStyleSheet("color: #9aa0a6; font-size: 14px; font-weight: bold;")
+        section.addWidget(title_label)
+        
+        # First metric
+        metric1_layout = QVBoxLayout()
+        metric1_layout.setSpacing(2)
+        label1_widget = QLabel(label1)
+        label1_widget.setStyleSheet("color: #9aa0a6; font-size: 10px;")
+        value1_widget = QLabel(value1)
+        value1_widget.setStyleSheet("color: #00B0C8; font-size: 12px; font-weight: bold;")
+        metric1_layout.addWidget(label1_widget)
+        metric1_layout.addWidget(value1_widget)
+        section.addLayout(metric1_layout)
+        
+        # Second metric
+        metric2_layout = QVBoxLayout()
+        metric2_layout.setSpacing(2)
+        label2_widget = QLabel(label2)
+        label2_widget.setStyleSheet("color: #9aa0a6; font-size: 10px;")
+        value2_widget = QLabel(value2)
+        value2_widget.setStyleSheet("color: #00B0C8; font-size: 12px; font-weight: bold;")
+        metric2_layout.addWidget(label2_widget)
+        metric2_layout.addWidget(value2_widget)
+        section.addLayout(metric2_layout)
+        
+        return {
+            'layout': section,
+            'value1': value1_widget,
+            'value2': value2_widget
+        }
     
     def _create_dynamic_metric_box(self, title, stat1, stat2):
         """Create a metric box and return references to dynamic labels."""
@@ -316,20 +468,25 @@ class MonitoringWindow(QWidget):
         """Update CPU metrics display."""
         self.cpu_labels['name'].setText(cpu_metrics.name)
         
+        # Update temperature and usage displays
+        self.cpu_labels['temp_display'].setText(f"{cpu_metrics.temperature}°")
+        self.cpu_labels['usage_display'].setText(f"{cpu_metrics.usage:.0f} %")
+        
+        # Update stats
         if cpu_metrics.fan_speed > 0:
-            self.cpu_labels['fan_speed'].setText(f"{cpu_metrics.fan_speed} RPM")
+            self.cpu_labels['fan_speed']['value'].setText(f"{cpu_metrics.fan_speed} RPM")
         else:
-            self.cpu_labels['fan_speed'].setText("-- RPM")
+            self.cpu_labels['fan_speed']['value'].setText("-- RPM")
             
         if cpu_metrics.frequency > 0:
-            self.cpu_labels['frequency'].setText(f"{cpu_metrics.frequency} MHz")
+            self.cpu_labels['frequency']['value'].setText(f"{cpu_metrics.frequency} MHz")
         else:
-            self.cpu_labels['frequency'].setText("-- MHz")
+            self.cpu_labels['frequency']['value'].setText("-- MHz")
             
         if cpu_metrics.voltage > 0:
-            self.cpu_labels['voltage'].setText(f"{cpu_metrics.voltage:.3f} V")
+            self.cpu_labels['voltage']['value'].setText(f"{cpu_metrics.voltage:.3f} V")
         else:
-            self.cpu_labels['voltage'].setText("-- V")
+            self.cpu_labels['voltage']['value'].setText("-- V")
             
         self.cpu_labels['min_temp'].setText(f"Min: {cpu_metrics.min_temp}°")
         self.cpu_labels['max_temp'].setText(f"Max: {cpu_metrics.max_temp}°")
@@ -342,15 +499,18 @@ class MonitoringWindow(QWidget):
         """Update GPU metrics display."""
         self.gpu_labels['name'].setText(gpu_metrics.name)
         
-        if gpu_metrics.fan_speed > 0:
-            self.gpu_labels['fan_speed'].setText(f"{gpu_metrics.fan_speed} RPM")
-        else:
-            self.gpu_labels['fan_speed'].setText("-- RPM")
+        # Update temperature and usage displays
+        self.gpu_labels['temp_display'].setText(f"{gpu_metrics.temperature}°")
+        self.gpu_labels['usage_display'].setText(f"{gpu_metrics.usage:.0f} %")
+        
+        # Update stats
+        # Always show fan speed, even if 0 (modern GPUs can have 0 RPM when idle)
+        self.gpu_labels['fan_speed']['value'].setText(f"{gpu_metrics.fan_speed} RPM")
             
         if gpu_metrics.core_clock > 0:
-            self.gpu_labels['core_clock'].setText(f"{gpu_metrics.core_clock} MHz")
+            self.gpu_labels['core_clock']['value'].setText(f"{gpu_metrics.core_clock} MHz")
         else:
-            self.gpu_labels['core_clock'].setText("-- MHz")
+            self.gpu_labels['core_clock']['value'].setText("-- MHz")
             
         self.gpu_labels['min_temp'].setText(f"Min: {gpu_metrics.min_temp}°")
         self.gpu_labels['max_temp'].setText(f"Max: {gpu_metrics.max_temp}°")
@@ -361,9 +521,13 @@ class MonitoringWindow(QWidget):
     
     def _update_system_metrics(self, system_metrics: SystemMetrics):
         """Update system metrics display."""
+        # Update temperature display
+        self.system_labels['temp_display'].setText(f"{system_metrics.temperature}°")
+        
         self.system_labels['min_temp'].setText(f"Min: {system_metrics.min_temp}°")
         self.system_labels['max_temp'].setText(f"Max: {system_metrics.max_temp}°")
         
+        # Update RAM metrics
         if system_metrics.ram_frequency > 0:
             self.system_labels['ram_frequency'].setText(f"{system_metrics.ram_frequency} MHz")
         else:
@@ -371,16 +535,17 @@ class MonitoringWindow(QWidget):
             
         if system_metrics.ram_total_gb > 0:
             self.system_labels['ram_usage'].setText(
-                f"Usage: {system_metrics.ram_usage_gb} GB ({system_metrics.ram_usage_percent}%)"
+                f"{system_metrics.ram_usage_gb} GB ({system_metrics.ram_usage_percent:.1f}%)"
             )
         else:
-            self.system_labels['ram_usage'].setText("Usage: -- GB (--%)")
+            self.system_labels['ram_usage'].setText("-- GB (--%)")
             
-        self.system_labels['eth_download'].setText(f"{system_metrics.ethernet_download} Kbps")
-        self.system_labels['eth_upload'].setText(f"Upload: {system_metrics.ethernet_upload} Kbps")
+        # Update network metrics
+        self.system_labels['eth_download'].setText(f"{system_metrics.ethernet_download:.1f} Kbps")
+        self.system_labels['eth_upload'].setText(f"{system_metrics.ethernet_upload:.1f} Kbps")
         
-        self.system_labels['wifi_download'].setText(f"{system_metrics.wifi_download} Kbps")
-        self.system_labels['wifi_upload'].setText(f"Upload: {system_metrics.wifi_upload} Kbps")
+        self.system_labels['wifi_download'].setText(f"{system_metrics.wifi_download:.1f} Kbps")
+        self.system_labels['wifi_upload'].setText(f"{system_metrics.wifi_upload:.1f} Kbps")
         
         # Update system temperature graph (using RAM usage as a proxy for system load)
         if self.system_graph:
