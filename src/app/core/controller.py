@@ -3,7 +3,6 @@ from .models import Tab, LightingProfile, OverclockLevel, TemperatureUnit
 from .metrics_service import MetricsService
 from .fan_service import FanService
 from .battery_service import BatteryService
-from .lighting_service import LightingService
 
 
 class CoreController(QObject):
@@ -23,7 +22,6 @@ class CoreController(QObject):
         self.metrics = MetricsService(self)
         self.fans = FanService(self)
         self.battery = BatteryService(self)
-        self.lighting_service = LightingService(self)
 
     # Lifecycle
     def start(self):
