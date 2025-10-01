@@ -47,16 +47,16 @@ class CPUDetailsPopup(QFrame):
         header_layout.setSpacing(10)
         
         core_header = QLabel("Core")
-        core_header.setStyleSheet("color: #2b2f33; font-size: 11px; font-weight: bold;")
+        core_header.setStyleSheet("color: #00B0C8; font-size: 11px; font-weight: bold;")
         core_header.setMinimumWidth(80)
         
         freq_header = QLabel("Frequency")
-        freq_header.setStyleSheet("color: #2b2f33; font-size: 11px; font-weight: bold;")
+        freq_header.setStyleSheet("color: #00B0C8; font-size: 11px; font-weight: bold;")
         freq_header.setMinimumWidth(90)
         freq_header.setAlignment(Qt.AlignRight)
         
         temp_header = QLabel("Temperature")
-        temp_header.setStyleSheet("color: #2b2f33; font-size: 11px; font-weight: bold;")
+        temp_header.setStyleSheet("color: #00B0C8; font-size: 11px; font-weight: bold;")
         temp_header.setMinimumWidth(60)
         temp_header.setAlignment(Qt.AlignRight)
         
@@ -70,7 +70,7 @@ class CPUDetailsPopup(QFrame):
         # Separator line (same style as SettingsPopup)
         separator = QFrame()
         separator.setFrameShape(QFrame.HLine)
-        separator.setStyleSheet("color: #d3d6d8;")
+        separator.setStyleSheet("color: #00B0C8;")
         layout.addWidget(separator)
         
         # Core details container
@@ -88,8 +88,8 @@ class CPUDetailsPopup(QFrame):
         # Apply stylesheet similar to SettingsPopup
         self.setStyleSheet("""
             QWidget#container {
-                background: #e9eef0;
-                border: 1px solid #cdd3d6;
+                background: #1A1A1A;
+                border: 1px solid #00B0C8;
                 border-radius: 6px;
             }
         """)
@@ -101,18 +101,18 @@ class CPUDetailsPopup(QFrame):
         
         # Core label
         core_label = QLabel(f"Core #{core_num}")
-        core_label.setStyleSheet("color: #2b2f33; font-size: 12px; font-weight: bold;")
+        core_label.setStyleSheet("color: #d3d6d8; font-size: 12px; font-weight: bold;")
         core_label.setMinimumWidth(80)
         
         # Frequency label
         freq_label = QLabel("0 MHz")
-        freq_label.setStyleSheet("color: #2b2f33; font-size: 12px;")
+        freq_label.setStyleSheet("color: #d3d6d8; font-size: 12px;")
         freq_label.setMinimumWidth(90)
         freq_label.setAlignment(Qt.AlignRight)
         
         # Temperature label
-        temp_label = QLabel("0°C")
-        temp_label.setStyleSheet("color: #2b2f33; font-size: 12px;")
+        temp_label = QLabel("0 °C")
+        temp_label.setStyleSheet("color: #d3d6d8; font-size: 12px;")
         temp_label.setMinimumWidth(60)
         temp_label.setAlignment(Qt.AlignRight)
         
