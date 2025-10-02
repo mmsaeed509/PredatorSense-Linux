@@ -151,8 +151,8 @@ class PredatorStaticTab(QWidget):
         keyboard_frame.setMinimumHeight(230)
         keyboard_frame.setStyleSheet("""
             QFrame {
-                background: #000000;
-                border: 2px solid #00B0C8;
+                background: #121212;
+                border: 2px solid #121212;
                 border-radius: 10px;
             }
         """)
@@ -258,27 +258,31 @@ class PredatorStaticTab(QWidget):
             keys.append((0, row0_y, 1, 1, 0))
             # F1-F4 (zone 0)
             for i in range(1, 5):
-                keys.append((i + 0.5, row0_y, 1, 1, 0))
+                keys.append((i + 0.6, row0_y, 1, 1, 0))
             # F5-F8 (zone 1)
             for i in range(5, 9):
-                keys.append((i + 0.5, row0_y, 1, 1, 1))
+                keys.append((i + 0.8, row0_y, 1, 1, 1))
             # F9-F12 (zone 2)
             for i in range(9, 13):
-                keys.append((i + 0.5, row0_y, 1, 1, 2))
+                keys.append((i + 1, row0_y, 1, 1, 2))
             # Print, Scroll, Pause (zone 3)
             for i in range(13, 16):
-                keys.append((i + 1, row0_y, 1, 1, 3))
+                keys.append((i + 1.5, row0_y, 1, 1, 3))
+
+            # Print, Scroll, Pause (zone 3)
+            for i in range(16, 20):
+                keys.append((i + 2, row0_y, 1, 1, 3))
             
             # Row 1: Number row
             row1_y = 1.8
             # ` to 5 (zone 0)
-            for i in range(6):
+            for i in range(5):
                 keys.append((i, row1_y, 1, 1, 0))
             # 6-7 (zone 1)
-            for i in range(6, 8):
+            for i in range(5, 9):
                 keys.append((i, row1_y, 1, 1, 1))
             # 8-0 (zone 2)
-            for i in range(8, 11):
+            for i in range(9, 11):
                 keys.append((i, row1_y, 1, 1, 2))
             # -=Backspace (zone 2)
             keys.append((11, row1_y, 1, 1, 2))
@@ -298,13 +302,13 @@ class PredatorStaticTab(QWidget):
             # Tab (zone 0)
             keys.append((0, row2_y, 1.5, 1, 0))
             # Q-T (zone 0)
-            for i in range(1, 6):
+            for i in range(1, 5):
                 keys.append((i + 0.5, row2_y, 1, 1, 0))
             # Y-U (zone 1)
-            for i in range(6, 8):
+            for i in range(5, 9):
                 keys.append((i + 0.5, row2_y, 1, 1, 1))
             # I-P (zone 2)
-            for i in range(8, 11):
+            for i in range(9, 11):
                 keys.append((i + 0.5, row2_y, 1, 1, 2))
             # []\ (zone 2)
             keys.append((11.5, row2_y, 1, 1, 2))
@@ -324,18 +328,18 @@ class PredatorStaticTab(QWidget):
             # Caps (zone 0)
             keys.append((0, row3_y, 1.75, 1, 0))
             # A-G (zone 0)
-            for i in range(1, 6):
+            for i in range(1, 5):
                 keys.append((i + 0.75, row3_y, 1, 1, 0))
             # H-J (zone 1)
-            for i in range(6, 8):
+            for i in range(5, 9):
                 keys.append((i + 0.75, row3_y, 1, 1, 1))
             # K-; (zone 2)
-            for i in range(8, 11):
+            for i in range(9, 11):
                 keys.append((i + 0.75, row3_y, 1, 1, 2))
             # '" (zone 2)
             keys.append((11.75, row3_y, 1, 1, 2))
             # Enter (zone 2)
-            keys.append((12.75, row3_y, 2.25, 1, 2))
+            keys.append((12.75, row3_y, 1.2, 1, 2))
             # Numpad (zone 3)
             keys.append((18, row3_y, 1, 1, 3))
             keys.append((19, row3_y, 1, 1, 3))
@@ -346,13 +350,13 @@ class PredatorStaticTab(QWidget):
             # LShift (zone 0)
             keys.append((0, row4_y, 2.25, 1, 0))
             # Z-V (zone 0)
-            for i in range(2, 6):
+            for i in range(2, 5):
                 keys.append((i + 0.25, row4_y, 1, 1, 0))
             # B-N (zone 1)
-            for i in range(6, 8):
+            for i in range(5, 9):
                 keys.append((i + 0.25, row4_y, 1, 1, 1))
             # M-/ (zone 2)
-            for i in range(8, 11):
+            for i in range(9, 11):
                 keys.append((i + 0.25, row4_y, 1, 1, 2))
             # RShift (zone 2)
             keys.append((11.25, row4_y, 2.75, 1, 2))
@@ -372,11 +376,11 @@ class PredatorStaticTab(QWidget):
             keys.append((2.5, row5_y, 1.25, 1, 0))
             keys.append((3.75, row5_y, 1.25, 1, 0))
             # Spacebar (zone 1)
-            keys.append((5, row5_y, 6.25, 1, 1))
+            keys.append((5, row5_y, 5.25, 1, 1))
             # AltGr, Menu, Ctrl (zone 2)
-            keys.append((11.25, row5_y, 1.25, 1, 2))
-            keys.append((12.5, row5_y, 1.25, 1, 2))
-            keys.append((13.75, row5_y, 1.25, 1, 2))
+            keys.append((10.25, row5_y, 1.25, 1, 2))
+            keys.append((11.5, row5_y, 1.25, 1, 2))
+            keys.append((12.75, row5_y, 1.25, 1, 2))
             # Left, Down, Right arrows (zone 3)
             keys.append((14.5, row5_y, 1, 1, 3))
             keys.append((15.5, row5_y, 1, 1, 3))
