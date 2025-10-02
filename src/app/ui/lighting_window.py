@@ -148,10 +148,10 @@ class PredatorStaticTab(QWidget):
         
         # Keyboard visualization
         keyboard_frame = QFrame()
-        keyboard_frame.setFixedHeight(200)
+        keyboard_frame.setFixedHeight(220)
         keyboard_frame.setStyleSheet("""
             QFrame {
-                background: #1a1a1a;
+                background: #000000;
                 border: 2px solid #00B0C8;
                 border-radius: 10px;
             }
@@ -198,68 +198,177 @@ class PredatorStaticTab(QWidget):
         layout.addStretch()
     
     def _create_keyboard_visual(self):
-        """Create a visual representation of the keyboard with 4 zones"""
+        """Create a realistic full-sized keyboard with 4 zones matching the screenshot"""
         keyboard_widget = QWidget()
-        keyboard_widget.setFixedHeight(140)
+        keyboard_widget.setFixedHeight(180)
         
         # Use a custom paint event to draw the keyboard
         def paint_keyboard(event):
             painter = QPainter(keyboard_widget)
             painter.setRenderHint(QPainter.Antialiasing)
             
-            # Draw keyboard outline
-            painter.setPen(QPen(QColor("#404040"), 2))
-            painter.setBrush(QBrush(QColor("#1a1a1a")))
-            painter.drawRoundedRect(5, 5, keyboard_widget.width()-10, keyboard_widget.height()-10, 8, 8)
+            # Black background
+            painter.fillRect(0, 0, keyboard_widget.width(), keyboard_widget.height(), QColor("#000000"))
             
-            # Key dimensions
-            key_width = 11
-            key_height = 11
-            key_spacing = 1.5
-            start_x = 15
-            start_y = 15
+            # Key dimensions (scaled to fit)
+            unit = 9  # Base unit size
+            gap = 1.5  # Gap between keys
+            start_x = 10
+            start_y = 10
             
-            # Calculate total keyboard width for zone divisions
-            total_keys_per_row = 21  # Approximate full keyboard width
-            zone_width = total_keys_per_row / 4  # Divide into 4 equal zones
+            # Define keyboard layout with proper key sizes
+            # Format: (x_offset, y_offset, width_units, height_units, zone)
+            keys = []
             
-            # Draw 5 rows of keys
-            for row in range(5):
-                # Adjust number of keys per row (realistic keyboard layout)
-                if row == 0:  # Function row
-                    num_keys = 19
-                elif row == 4:  # Bottom row (shorter)
-                    num_keys = 18
-                else:
-                    num_keys = 21
+            # Row 0: Function keys + extras
+            row0_y = 0
+            # Esc
+            keys.append((0, row0_y, 1, 1, 0))
+            # F1-F4 (zone 0)
+            for i in range(1, 5):
+                keys.append((i + 0.5, row0_y, 1, 1, 0))
+            # F5-F8 (zone 1)
+            for i in range(5, 9):
+                keys.append((i + 0.5, row0_y, 1, 1, 1))
+            # F9-F12 (zone 2)
+            for i in range(9, 13):
+                keys.append((i + 0.5, row0_y, 1, 1, 2))
+            # Print, Scroll, Pause (zone 3)
+            for i in range(13, 16):
+                keys.append((i + 1, row0_y, 1, 1, 3))
+            
+            # Row 1: Number row
+            row1_y = 1.8
+            # ` to 5 (zone 0)
+            for i in range(6):
+                keys.append((i, row1_y, 1, 1, 0))
+            # 6-7 (zone 1)
+            for i in range(6, 8):
+                keys.append((i, row1_y, 1, 1, 1))
+            # 8-0 (zone 2)
+            for i in range(8, 11):
+                keys.append((i, row1_y, 1, 1, 2))
+            # -=Backspace (zone 2)
+            keys.append((11, row1_y, 1, 1, 2))
+            keys.append((12, row1_y, 2, 1, 2))  # Backspace (2 units)
+            # Ins, Home, PgUp (zone 3)
+            keys.append((14.5, row1_y, 1, 1, 3))
+            keys.append((15.5, row1_y, 1, 1, 3))
+            keys.append((16.5, row1_y, 1, 1, 3))
+            # Numpad (zone 3)
+            keys.append((18, row1_y, 1, 1, 3))
+            keys.append((19, row1_y, 1, 1, 3))
+            keys.append((20, row1_y, 1, 1, 3))
+            keys.append((21, row1_y, 1, 1, 3))
+            
+            # Row 2: QWERTY row
+            row2_y = 2.8
+            # Tab (zone 0)
+            keys.append((0, row2_y, 1.5, 1, 0))
+            # Q-T (zone 0)
+            for i in range(1, 6):
+                keys.append((i + 0.5, row2_y, 1, 1, 0))
+            # Y-U (zone 1)
+            for i in range(6, 8):
+                keys.append((i + 0.5, row2_y, 1, 1, 1))
+            # I-P (zone 2)
+            for i in range(8, 11):
+                keys.append((i + 0.5, row2_y, 1, 1, 2))
+            # []\ (zone 2)
+            keys.append((11.5, row2_y, 1, 1, 2))
+            keys.append((12.5, row2_y, 1.5, 1, 2))
+            # Del, End, PgDn (zone 3)
+            keys.append((14.5, row2_y, 1, 1, 3))
+            keys.append((15.5, row2_y, 1, 1, 3))
+            keys.append((16.5, row2_y, 1, 1, 3))
+            # Numpad (zone 3)
+            keys.append((18, row2_y, 1, 1, 3))
+            keys.append((19, row2_y, 1, 1, 3))
+            keys.append((20, row2_y, 1, 1, 3))
+            keys.append((21, row2_y, 1, 2, 3))  # + (2 units tall)
+            
+            # Row 3: ASDF row
+            row3_y = 3.8
+            # Caps (zone 0)
+            keys.append((0, row3_y, 1.75, 1, 0))
+            # A-G (zone 0)
+            for i in range(1, 6):
+                keys.append((i + 0.75, row3_y, 1, 1, 0))
+            # H-J (zone 1)
+            for i in range(6, 8):
+                keys.append((i + 0.75, row3_y, 1, 1, 1))
+            # K-; (zone 2)
+            for i in range(8, 11):
+                keys.append((i + 0.75, row3_y, 1, 1, 2))
+            # '" (zone 2)
+            keys.append((11.75, row3_y, 1, 1, 2))
+            # Enter (zone 2)
+            keys.append((12.75, row3_y, 2.25, 1, 2))
+            # Numpad (zone 3)
+            keys.append((18, row3_y, 1, 1, 3))
+            keys.append((19, row3_y, 1, 1, 3))
+            keys.append((20, row3_y, 1, 1, 3))
+            
+            # Row 4: ZXCV row
+            row4_y = 4.8
+            # LShift (zone 0)
+            keys.append((0, row4_y, 2.25, 1, 0))
+            # Z-V (zone 0)
+            for i in range(2, 6):
+                keys.append((i + 0.25, row4_y, 1, 1, 0))
+            # B-N (zone 1)
+            for i in range(6, 8):
+                keys.append((i + 0.25, row4_y, 1, 1, 1))
+            # M-/ (zone 2)
+            for i in range(8, 11):
+                keys.append((i + 0.25, row4_y, 1, 1, 2))
+            # RShift (zone 2)
+            keys.append((11.25, row4_y, 2.75, 1, 2))
+            # Up arrow (zone 3)
+            keys.append((15.5, row4_y, 1, 1, 3))
+            # Numpad (zone 3)
+            keys.append((18, row4_y, 1, 1, 3))
+            keys.append((19, row4_y, 1, 1, 3))
+            keys.append((20, row4_y, 1, 1, 3))
+            keys.append((21, row4_y, 1, 2, 3))  # Enter (2 units tall)
+            
+            # Row 5: Bottom row
+            row5_y = 5.8
+            # Ctrl, Fn, Win, Alt (zone 0)
+            keys.append((0, row5_y, 1.25, 1, 0))
+            keys.append((1.25, row5_y, 1.25, 1, 0))
+            keys.append((2.5, row5_y, 1.25, 1, 0))
+            keys.append((3.75, row5_y, 1.25, 1, 0))
+            # Spacebar (zone 1)
+            keys.append((5, row5_y, 6.25, 1, 1))
+            # AltGr, Menu, Ctrl (zone 2)
+            keys.append((11.25, row5_y, 1.25, 1, 2))
+            keys.append((12.5, row5_y, 1.25, 1, 2))
+            keys.append((13.75, row5_y, 1.25, 1, 2))
+            # Left, Down, Right arrows (zone 3)
+            keys.append((14.5, row5_y, 1, 1, 3))
+            keys.append((15.5, row5_y, 1, 1, 3))
+            keys.append((16.5, row5_y, 1, 1, 3))
+            # Numpad (zone 3)
+            keys.append((18, row5_y, 2, 1, 3))  # 0 (2 units wide)
+            keys.append((20, row5_y, 1, 1, 3))
+            
+            # Draw all keys
+            for key_data in keys:
+                x_units, y_units, w_units, h_units, zone = key_data
                 
-                for col in range(num_keys):
-                    x = start_x + col * (key_width + key_spacing)
-                    y = start_y + row * (key_height + key_spacing)
-                    
-                    # Determine zone based on column position
-                    # Zone 1: Left side (cols 0-5)
-                    # Zone 2: Center-left (cols 6-10)
-                    # Zone 3: Center-right (cols 11-15)
-                    # Zone 4: Right side (cols 16+)
-                    if col <= 5:
-                        zone_color = self._zone_colors[0]
-                    elif col <= 10:
-                        zone_color = self._zone_colors[1]
-                    elif col <= 15:
-                        zone_color = self._zone_colors[2]
-                    else:
-                        zone_color = self._zone_colors[3]
-                    
-                    painter.setBrush(QBrush(QColor(zone_color)))
-                    painter.setPen(QPen(QColor("#2a2a2a"), 1))
-                    painter.drawRoundedRect(int(x), int(y), key_width, key_height, 2, 2)
-            
-            # Draw zone divider lines (subtle)
-            painter.setPen(QPen(QColor("#404040"), 1, Qt.DashLine))
-            for zone in range(1, 4):
-                x_pos = start_x + (zone * zone_width * (key_width + key_spacing))
-                painter.drawLine(int(x_pos), 10, int(x_pos), keyboard_widget.height()-10)
+                x = start_x + x_units * (unit + gap)
+                y = start_y + y_units * (unit + gap)
+                w = w_units * unit + (w_units - 1) * gap
+                h = h_units * unit + (h_units - 1) * gap
+                
+                # Get zone color
+                zone_color = self._zone_colors[zone]
+                
+                # Draw key with black fill and colored border
+                painter.setBrush(QBrush(QColor("#000000")))
+                painter.setPen(QPen(QColor(zone_color), 2))
+                painter.drawRoundedRect(int(x), int(y), int(w), int(h), 3, 3)
         
         keyboard_widget.paintEvent = paint_keyboard
         return keyboard_widget
