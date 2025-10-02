@@ -12,6 +12,7 @@ from PyQt5.QtWidgets import (
 )
 from app.ui.internal_window import InternalWindow
 from app.ui.fan_control_window import FanControlWindow
+from app.ui.lighting_window import LightingWindow
 from app.ui.settings_popup import SettingsPopup
 from app.ui.monitoring_window import MonitoringWindow
 from app.ui.battery_usb_window import BatteryUSBWindow
@@ -51,6 +52,7 @@ class CustomShapeWindow(QMainWindow):
         self.controller = CoreController(self)
         self.internal_window = None
         self.fan_window = None
+        self.lighting_window = None
         self.monitoring_window = None
         self.battery_usb_window = None
         self.overclock_window = None
@@ -268,7 +270,7 @@ class CustomShapeWindow(QMainWindow):
         # Only enable antialiasing for text, not for shapes (performance optimization)
         
         # Background gradient (dark) - matching screenshot theme
-        painter.fillRect(self.rect(), QColor("#0a0a0a"))  # Darker background to match AeroBlade theme
+        painter.fillRect(self.rect(), QColor("#191919"))  # Darker background to match AeroBlade theme
 
         # Draw the logo in the top left corner, slightly moved to the right
         if self.logo_pixmap:
@@ -396,6 +398,10 @@ class CustomShapeWindow(QMainWindow):
             except Exception:
                 pass
 
+    def _ensureLightingWindow(self):
+        if self.lighting_window is None:
+            self.lighting_window = LightingWindow(self, controller=self.controller)
+
     def _ensureMonitoringWindow(self):
         if self.monitoring_window is None:
             self.monitoring_window = MonitoringWindow(self, controller=self.controller)
@@ -423,6 +429,9 @@ class CustomShapeWindow(QMainWindow):
         if tab == Tab.FAN_CONTROL:
             self._ensureFanWindow()
             self._swapContent(self.fan_window)
+        elif tab == Tab.LIGHTING:
+            self._ensureLightingWindow()
+            self._swapContent(self.lighting_window)
         elif tab == Tab.MONITORING:
             self._ensureMonitoringWindow()
             self._swapContent(self.monitoring_window)
