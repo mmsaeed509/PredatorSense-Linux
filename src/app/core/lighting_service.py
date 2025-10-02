@@ -48,6 +48,29 @@ class LightingService(QObject):
             self._current_mode = mode
             self.lightingChanged.emit()
     
+    def get_current_zone_colors(self) -> Tuple[str, str, str, str, int]:
+        """
+        Read current zone colors from system
+        
+        Returns:
+            Tuple of (zone1_hex, zone2_hex, zone3_hex, zone4_hex, brightness)
+        """
+        try:
+            path = _rgb_attr_path("per_zone_mode")
+            with open(path, 'r') as f:
+                data = f.read().strip()
+            
+            # Format: "color1,color2,color3,color4,brightness"
+            parts = data.split(',')
+            if len(parts) == 5:
+                return (parts[0], parts[1], parts[2], parts[3], int(parts[4]))
+            
+        except Exception as e:
+            print(f"Error reading zone colors: {e}")
+        
+        # Return defaults if read fails
+        return ("4287f5", "4287f5", "4287f5", "4287f5", 100)
+    
     # Static Mode (Per-Zone) Functions
     def set_per_zone_colors(self, zone1: str, zone2: str, zone3: str, zone4: str, brightness: int = 100) -> bool:
         """

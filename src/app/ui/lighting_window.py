@@ -82,8 +82,17 @@ class PredatorStaticTab(QWidget):
     def __init__(self, controller: CoreController, parent=None):
         super().__init__(parent)
         self.controller = controller
-        self._brightness = 100
-        self._zone_colors = ["#00ffff", "#ff00ff", "#00ffff", "#ff00ff"]  # Default cyan/purple
+        
+        # Read current colors from system
+        try:
+            zone1, zone2, zone3, zone4, brightness = self.controller.lighting_service.get_current_zone_colors()
+            self._zone_colors = [f"#{zone1}", f"#{zone2}", f"#{zone3}", f"#{zone4}"]
+            self._brightness = brightness
+        except Exception as e:
+            print(f"Error reading current colors: {e}")
+            self._brightness = 100
+            self._zone_colors = ["#00ffff", "#ff00ff", "#00ffff", "#ff00ff"]  # Default cyan/purple
+        
         self._keyboard_widget = None
         self._setup_ui()
     
@@ -160,72 +169,38 @@ class PredatorStaticTab(QWidget):
         
         # Zone controls
         zones_section = QHBoxLayout()
-        zones_section.setSpacing(30)
-        zones_section.setContentsMargins(50, 20, 50, 20)
+        zones_section.setSpacing(40)
+        zones_section.setContentsMargins(30, 20, 30, 20)
         
-        self._zone_buttons = []
+        zone_names = ["Left", "Center-Left", "Center-Right", "Right"]
+        self._zone_color_buttons = []
+        
         for i in range(4):
             zone_container = QVBoxLayout()
-            zone_container.setSpacing(10)
+            zone_container.setSpacing(12)
             zone_container.setAlignment(Qt.AlignCenter)
             
-            # Zone label
-            zone_label = QLabel(f"Zone {i+1}")
+            # Zone label with name
+            zone_label = QLabel(f"Zone {i+1}\n{zone_names[i]}")
             zone_label.setAlignment(Qt.AlignCenter)
-            zone_label.setStyleSheet("color: #888888; font-size: 12px;")
+            zone_label.setStyleSheet("color: #00B0C8; font-size: 11px; font-weight: bold;")
             zone_container.addWidget(zone_label)
             
-            # Zone controls
-            zone_controls = QHBoxLayout()
-            zone_controls.setSpacing(10)
-            zone_controls.setAlignment(Qt.AlignCenter)
+            # Color picker button
+            color_btn = SimpleColorButton(self._zone_colors[i], 50)
+            color_btn.clicked.connect(lambda checked, zone=i, btn=color_btn: self._zone_color_picked(zone, btn))
+            zone_container.addWidget(color_btn)
             
-            # Cyan color button
-            cyan_btn = QPushButton()
-            cyan_btn.setFixedSize(40, 25)
-            cyan_btn.setStyleSheet("""
-                QPushButton {
-                    background: #00ffff;
-                    border: 2px solid #404040;
-                    border-radius: 4px;
-                }
-                QPushButton:hover {
-                    border-color: #ffffff;
-                }
-            """)
-            cyan_btn.clicked.connect(lambda checked, zone=i: self._set_zone_color(zone, "#00ffff"))
-            zone_controls.addWidget(cyan_btn)
-            
-            # Purple color button  
-            purple_btn = QPushButton()
-            purple_btn.setFixedSize(40, 25)
-            purple_btn.setStyleSheet("""
-                QPushButton {
-                    background: #ff00ff;
-                    border: 2px solid #404040;
-                    border-radius: 4px;
-                }
-                QPushButton:hover {
-                    border-color: #ffffff;
-                }
-            """)
-            purple_btn.clicked.connect(lambda checked, zone=i: self._set_zone_color(zone, "#ff00ff"))
-            zone_controls.addWidget(purple_btn)
-            
-            zone_container.addLayout(zone_controls)
-            
-            # Store buttons for later reference
-            self._zone_buttons.append((cyan_btn, purple_btn))
-            
+            self._zone_color_buttons.append(color_btn)
             zones_section.addLayout(zone_container)
         
         layout.addLayout(zones_section)
         layout.addStretch()
     
     def _create_keyboard_visual(self):
-        """Create a visual representation of the keyboard"""
+        """Create a visual representation of the keyboard with 4 zones"""
         keyboard_widget = QWidget()
-        keyboard_widget.setFixedHeight(120)
+        keyboard_widget.setFixedHeight(140)
         
         # Use a custom paint event to draw the keyboard
         def paint_keyboard(event):
@@ -234,45 +209,57 @@ class PredatorStaticTab(QWidget):
             
             # Draw keyboard outline
             painter.setPen(QPen(QColor("#404040"), 2))
-            painter.setBrush(QBrush(QColor("#2a2a2a")))
-            painter.drawRoundedRect(10, 10, keyboard_widget.width()-20, keyboard_widget.height()-20, 8, 8)
+            painter.setBrush(QBrush(QColor("#1a1a1a")))
+            painter.drawRoundedRect(5, 5, keyboard_widget.width()-10, keyboard_widget.height()-10, 8, 8)
             
-            # Draw keys with zone colors
-            key_width = 12
-            key_height = 12
-            key_spacing = 2
+            # Key dimensions
+            key_width = 11
+            key_height = 11
+            key_spacing = 1.5
+            start_x = 15
+            start_y = 15
             
-            # Zone 1 (WASD area) - Top left
-            painter.setBrush(QBrush(QColor(self._zone_colors[0])))
-            for row in range(3):
-                for col in range(8):
-                    x = 20 + col * (key_width + key_spacing)
-                    y = 20 + row * (key_height + key_spacing)
-                    painter.drawRoundedRect(x, y, key_width, key_height, 2, 2)
+            # Calculate total keyboard width for zone divisions
+            total_keys_per_row = 21  # Approximate full keyboard width
+            zone_width = total_keys_per_row / 4  # Divide into 4 equal zones
             
-            # Zone 2 (Arrow keys area) - Top right  
-            painter.setBrush(QBrush(QColor(self._zone_colors[1])))
-            for row in range(3):
-                for col in range(8):
-                    x = 200 + col * (key_width + key_spacing)
-                    y = 20 + row * (key_height + key_spacing)
-                    painter.drawRoundedRect(x, y, key_width, key_height, 2, 2)
+            # Draw 5 rows of keys
+            for row in range(5):
+                # Adjust number of keys per row (realistic keyboard layout)
+                if row == 0:  # Function row
+                    num_keys = 19
+                elif row == 4:  # Bottom row (shorter)
+                    num_keys = 18
+                else:
+                    num_keys = 21
+                
+                for col in range(num_keys):
+                    x = start_x + col * (key_width + key_spacing)
+                    y = start_y + row * (key_height + key_spacing)
+                    
+                    # Determine zone based on column position
+                    # Zone 1: Left side (cols 0-5)
+                    # Zone 2: Center-left (cols 6-10)
+                    # Zone 3: Center-right (cols 11-15)
+                    # Zone 4: Right side (cols 16+)
+                    if col <= 5:
+                        zone_color = self._zone_colors[0]
+                    elif col <= 10:
+                        zone_color = self._zone_colors[1]
+                    elif col <= 15:
+                        zone_color = self._zone_colors[2]
+                    else:
+                        zone_color = self._zone_colors[3]
+                    
+                    painter.setBrush(QBrush(QColor(zone_color)))
+                    painter.setPen(QPen(QColor("#2a2a2a"), 1))
+                    painter.drawRoundedRect(int(x), int(y), key_width, key_height, 2, 2)
             
-            # Zone 3 (Numpad area) - Bottom right
-            painter.setBrush(QBrush(QColor(self._zone_colors[2])))
-            for row in range(2):
-                for col in range(6):
-                    x = 220 + col * (key_width + key_spacing)
-                    y = 70 + row * (key_height + key_spacing)
-                    painter.drawRoundedRect(x, y, key_width, key_height, 2, 2)
-            
-            # Zone 4 (Function keys) - Bottom left
-            painter.setBrush(QBrush(QColor(self._zone_colors[3])))
-            for row in range(2):
-                for col in range(6):
-                    x = 20 + col * (key_width + key_spacing)
-                    y = 70 + row * (key_height + key_spacing)
-                    painter.drawRoundedRect(x, y, key_width, key_height, 2, 2)
+            # Draw zone divider lines (subtle)
+            painter.setPen(QPen(QColor("#404040"), 1, Qt.DashLine))
+            for zone in range(1, 4):
+                x_pos = start_x + (zone * zone_width * (key_width + key_spacing))
+                painter.drawLine(int(x_pos), 10, int(x_pos), keyboard_widget.height()-10)
         
         keyboard_widget.paintEvent = paint_keyboard
         return keyboard_widget
@@ -283,7 +270,9 @@ class PredatorStaticTab(QWidget):
         # Apply brightness change immediately
         self._apply_current_settings()
     
-    def _set_zone_color(self, zone_index, color):
+    def _zone_color_picked(self, zone_index, button):
+        """Handle zone color picker change"""
+        color = button.get_color()
         self._zone_colors[zone_index] = color
         # Trigger repaint of keyboard visual
         if self._keyboard_widget:
