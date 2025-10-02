@@ -2,7 +2,7 @@ from PyQt5.QtCore import Qt, QPoint
 from PyQt5.QtGui import QPainter, QColor, QBrush, QRegion, QPolygon, QPen, QFont
 from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
                           QPushButton, QSizePolicy, QButtonGroup, QSlider)
-from app.utils.ui_utils import FanDial, ModeButton
+from app.utils.ui_utils import FanDial, ModeButtonWithLabel
 from app.utils.config_utils import config_manager
 from app.core import CoreController
 from config import DEFAULT_FONT_FAMILY
@@ -134,13 +134,9 @@ class FanControlWindow(QWidget):
         mode_row.setContentsMargins(40, 10, 40, 10)
 
         # Custom predator-style mode buttons with proper sizing
-        self.btn_auto = ModeButton("Auto")
-        self.btn_max = ModeButton("Max") 
-        self.btn_custom = ModeButton("Custom")
-        
-        # Set consistent button sizes to match screenshot
-        for btn in [self.btn_auto, self.btn_max, self.btn_custom]:
-            btn.setFixedSize(120, 80)
+        self.btn_auto = ModeButtonWithLabel("Auto")
+        self.btn_max = ModeButtonWithLabel("Max") 
+        self.btn_custom = ModeButtonWithLabel("Custom")
         
         self.btn_auto.setChecked(True)
         self.btn_custom.setEnabled(True)  # Enable custom mode button

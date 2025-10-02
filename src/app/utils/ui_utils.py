@@ -1,6 +1,6 @@
 from PyQt5.QtCore import QPoint, Qt, pyqtProperty, QTimer, QElapsedTimer, pyqtSignal
 from PyQt5.QtGui import QPolygon, QRegion, QPainter, QColor, QPen, QFont
-from PyQt5.QtWidgets import QWidget
+from PyQt5.QtWidgets import QWidget, QLabel, QVBoxLayout
 from config import DEFAULT_FONT_FAMILY
 
 
@@ -262,22 +262,18 @@ class FanDial(QWidget):
 class ModeButton(QWidget):
     """
     Custom checkable button used for Fan modes (Auto/Max/Custom) matching the screenshot style.
-    - Checked: cyan border, cyan icon and caption
-    - Disabled: dimmed
-    - Normal: gray icon/caption
-    Emits clicked() on mouse release inside.
+    Rectangular button with angled corners, text label positioned below the button.
     """
 
     clicked = pyqtSignal()
 
-    def __init__(self, caption: str, subglyph: str = "", parent=None):
+    def __init__(self, caption: str, parent=None):
         super().__init__(parent)
         self._caption = caption
-        self._subglyph = subglyph  # e.g., "A" for Auto, or "" for Max
         self._checked = False
-        self.setMinimumSize(140, 92)
+        # Button area only (text will be below)
+        self.setMinimumSize(120, 60)
         self._font_caption = QFont(DEFAULT_FONT_FAMILY, 11)
-        self._font_sub = QFont(DEFAULT_FONT_FAMILY, 14, QFont.DemiBold)
         self.setAttribute(Qt.WA_Hover)
 
     # API
@@ -293,153 +289,190 @@ class ModeButton(QWidget):
         self._caption = text
         self.update()
 
-    def setSubglyph(self, text: str):
-        self._subglyph = text
-        self.update()
-
     # Interaction
     def mouseReleaseEvent(self, e):
         if e.button() == Qt.LeftButton and self.rect().contains(e.pos()):
             self.clicked.emit()
         super().mouseReleaseEvent(e)
 
-    # Painting helpers
-    def _panelPolygon(self):
+    # Painting helpers - rectangular button with angled corners like screenshot
+    def _buttonPolygon(self):
         w, h = self.width(), self.height()
-        top = 10
-        bot = h - 10
-        left = 10
-        right = w - 10
-        notch = 18
+        corner_cut = 8  # Size of angled corners
         pts = [
-            QPoint(left + notch, top),
-            QPoint(right - notch, top),
-            QPoint(right, top + notch),
-            QPoint(right, bot - notch),
-            QPoint(right - notch, bot),
-            QPoint(left + notch, bot),
-            QPoint(left, bot - notch),
-            QPoint(left, top + notch),
+            QPoint(corner_cut, 0),           # Top left after cut
+            QPoint(w - corner_cut, 0),       # Top right before cut
+            QPoint(w, corner_cut),           # Top right after cut
+            QPoint(w, h - corner_cut),       # Bottom right before cut
+            QPoint(w - corner_cut, h),       # Bottom right after cut
+            QPoint(corner_cut, h),           # Bottom left before cut
+            QPoint(0, h - corner_cut),       # Bottom left after cut
+            QPoint(0, corner_cut),           # Top left before cut
         ]
         return QPolygon(pts)
 
-    def _drawFanGlyph(self, p: QPainter, cx: int, cy: int, size: int, color: QColor):
+    def _drawFanIcon(self, p: QPainter, cx: int, cy: int, size: int, color: QColor):
         p.save()
         p.setRenderHint(QPainter.Antialiasing)
         
-        # Different icons based on mode
+        # Different icons based on mode matching screenshot
         if self._caption == "Auto":
-            # Auto mode: Fan with "A" overlay
+            # Auto mode: Fan with "A" overlay (like screenshot)
             p.setPen(QPen(color, 2))
             # Outer ring
-            p.drawEllipse(cx - size//3, cy - size//3, 2*size//3, 2*size//3)
+            ring_radius = size // 3
+            p.drawEllipse(cx - ring_radius, cy - ring_radius, 2 * ring_radius, 2 * ring_radius)
+            
             # Fan blades
             blades = 8
-            radius = size * 0.45
+            blade_radius = size * 0.4
             from math import cos, sin, radians
             for i in range(blades):
-                a = radians(i * (360.0 / blades))
-                x1 = cx + int(radius * cos(a))
-                y1 = cy + int(radius * sin(a))
-                x2 = cx + int((radius - size * 0.2) * cos(a))
-                y2 = cy + int((radius - size * 0.2) * sin(a))
+                angle = radians(i * (360.0 / blades))
+                x1 = cx + int(blade_radius * cos(angle))
+                y1 = cy + int(blade_radius * sin(angle))
+                x2 = cx + int((blade_radius - size * 0.15) * cos(angle))
+                y2 = cy + int((blade_radius - size * 0.15) * sin(angle))
                 p.drawLine(x1, y1, x2, y2)
-            # "A" in center
-            p.setFont(QFont(DEFAULT_FONT_FAMILY, 12, QFont.Bold))
+            
+            # "A" overlay in center
+            p.setFont(QFont(DEFAULT_FONT_FAMILY, 14, QFont.Bold))
             p.setPen(color)
-            p.drawText(cx - 4, cy + 4, "A")
+            p.drawText(cx - 5, cy + 5, "A")
             
         elif self._caption == "Max":
-            # Max mode: Larger fan with more blades
+            # Max mode: More aggressive fan (like screenshot)
             p.setPen(QPen(color, 2))
             # Outer ring
-            p.drawEllipse(cx - size//3, cy - size//3, 2*size//3, 2*size//3)
-            # More aggressive fan blades for "max"
-            blades = 12
-            radius = size * 0.5
+            ring_radius = size // 3
+            p.drawEllipse(cx - ring_radius, cy - ring_radius, 2 * ring_radius, 2 * ring_radius)
+            
+            # More blades for "max" effect
+            blades = 16
+            blade_radius = size * 0.42
             from math import cos, sin, radians
             for i in range(blades):
-                a = radians(i * (360.0 / blades))
-                x1 = cx + int(radius * cos(a))
-                y1 = cy + int(radius * sin(a))
-                x2 = cx + int((radius - size * 0.3) * cos(a))
-                y2 = cy + int((radius - size * 0.3) * sin(a))
+                angle = radians(i * (360.0 / blades))
+                x1 = cx + int(blade_radius * cos(angle))
+                y1 = cy + int(blade_radius * sin(angle))
+                x2 = cx + int((blade_radius - size * 0.2) * cos(angle))
+                y2 = cy + int((blade_radius - size * 0.2) * sin(angle))
                 p.drawLine(x1, y1, x2, y2)
                 
         elif self._caption == "Custom":
-            # Custom mode: Fan with wrench/tool overlay
+            # Custom mode: Fan with wrench overlay (like screenshot)
             p.setPen(QPen(color, 2))
             # Outer ring
-            p.drawEllipse(cx - size//3, cy - size//3, 2*size//3, 2*size//3)
+            ring_radius = size // 3
+            p.drawEllipse(cx - ring_radius, cy - ring_radius, 2 * ring_radius, 2 * ring_radius)
+            
             # Fan blades
             blades = 8
-            radius = size * 0.45
+            blade_radius = size * 0.4
             from math import cos, sin, radians
             for i in range(blades):
-                a = radians(i * (360.0 / blades))
-                x1 = cx + int(radius * cos(a))
-                y1 = cy + int(radius * sin(a))
-                x2 = cx + int((radius - size * 0.2) * cos(a))
-                y2 = cy + int((radius - size * 0.2) * sin(a))
+                angle = radians(i * (360.0 / blades))
+                x1 = cx + int(blade_radius * cos(angle))
+                y1 = cy + int(blade_radius * sin(angle))
+                x2 = cx + int((blade_radius - size * 0.15) * cos(angle))
+                y2 = cy + int((blade_radius - size * 0.15) * sin(angle))
                 p.drawLine(x1, y1, x2, y2)
-            # Wrench/tool icon overlay
+            
+            # Wrench/tool overlay
             p.setPen(QPen(color, 3))
             # Simple wrench shape
-            p.drawLine(cx - 8, cy - 8, cx + 8, cy + 8)
-            p.drawLine(cx - 6, cy - 10, cx - 4, cy - 8)
-            p.drawLine(cx + 4, cy + 8, cx + 6, cy + 10)
+            p.drawLine(cx - 10, cy - 6, cx + 10, cy + 6)
+            p.drawLine(cx - 8, cy - 8, cx - 6, cy - 6)
+            p.drawLine(cx + 6, cy + 6, cx + 8, cy + 8)
         
         p.restore()
 
     def paintEvent(self, event):
         p = QPainter(self)
-        # Only enable antialiasing for text, not for shapes (performance optimization)
-        poly = self._panelPolygon()
+        poly = self._buttonPolygon()
 
-        # Base panel - darker background to match screenshot
+        # Button background - matching screenshot colors
         p.setPen(Qt.NoPen)
         if self.isEnabled() and self._checked:
-            # Selected state: darker background with subtle cyan tint
-            p.setBrush(QColor(15, 25, 28))
+            # Selected state: very dark background
+            p.setBrush(QColor(8, 8, 8))
         else:
-            # Normal state: very dark background
-            p.setBrush(QColor(18, 18, 18))
+            # Normal state: slightly lighter dark background
+            p.setBrush(QColor(15, 15, 15))
         p.drawPolygon(poly)
 
-        # Border - cyan for selected, subtle gray for unselected
+        # Button border - cyan for selected, gray for unselected
         if self.isEnabled() and self._checked:
             border = QPen(QColor("#00B0C8"), 2)
         else:
-            border = QPen(QColor(35, 35, 35), 1)
+            border = QPen(QColor(40, 40, 40), 1)
         p.setPen(border)
         p.setBrush(Qt.NoBrush)
         p.drawPolygon(poly)
 
-        # Icon positioning - center the fan icon
-        cx, cy = self.width()//2, int(self.height()*0.40)
+        # Icon positioning - center of button
+        cx, cy = self.width() // 2, self.height() // 2
         
         # Icon color based on state
         if not self.isEnabled():
-            icon_color = QColor(70, 70, 70)
+            icon_color = QColor(60, 60, 60)
         elif self._checked:
             icon_color = QColor("#00B0C8")
         else:
-            icon_color = QColor(120, 120, 120)
+            icon_color = QColor(100, 100, 100)
             
         # Draw the fan icon
-        self._drawFanGlyph(p, cx, cy, 40, icon_color)
+        self._drawFanIcon(p, cx, cy, 36, icon_color)
 
-        # Caption text - enable antialiasing only for text
-        p.setRenderHint(QPainter.Antialiasing)
-        p.setFont(self._font_caption)
+
+class ModeButtonWithLabel(QWidget):
+    """
+    Complete mode button widget with button and label below, matching screenshot layout.
+    """
+    
+    clicked = pyqtSignal()
+    
+    def __init__(self, caption: str, parent=None):
+        super().__init__(parent)
+        self._caption = caption
+        self._button = ModeButton(caption, self)
+        self._label = QLabel(caption, self)
         
-        # Text color based on state
-        if not self.isEnabled():
-            p.setPen(QColor(100, 100, 100))
-        elif self._checked:
-            p.setPen(QColor("#00B0C8"))
+        # Setup label styling
+        self._label.setAlignment(Qt.AlignCenter)
+        self._label.setFont(QFont(DEFAULT_FONT_FAMILY, 11))
+        self._label.setStyleSheet("color: #9aa0a6; margin-top: 8px;")
+        
+        # Layout
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(8)
+        layout.addWidget(self._button)
+        layout.addWidget(self._label)
+        
+        # Connect signals
+        self._button.clicked.connect(self.clicked.emit)
+        
+        # Set size
+        self.setFixedSize(120, 100)
+    
+    def setChecked(self, checked: bool):
+        self._button.setChecked(checked)
+        # Update label color based on state
+        if checked:
+            self._label.setStyleSheet("color: #00B0C8; margin-top: 8px; font-weight: bold;")
         else:
-            p.setPen(QColor(140, 140, 140))
-            
-        tw = p.fontMetrics().width(self._caption)
-        p.drawText(self.width()//2 - tw//2, self.height() - 16, self._caption)
+            self._label.setStyleSheet("color: #9aa0a6; margin-top: 8px;")
+    
+    def isChecked(self) -> bool:
+        return self._button.isChecked()
+    
+    def setEnabled(self, enabled: bool):
+        super().setEnabled(enabled)
+        self._button.setEnabled(enabled)
+        if not enabled:
+            self._label.setStyleSheet("color: #606060; margin-top: 8px;")
+        elif self.isChecked():
+            self._label.setStyleSheet("color: #00B0C8; margin-top: 8px; font-weight: bold;")
+        else:
+            self._label.setStyleSheet("color: #9aa0a6; margin-top: 8px;")
