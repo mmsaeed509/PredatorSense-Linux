@@ -148,7 +148,7 @@ class PredatorStaticTab(QWidget):
         
         # Keyboard visualization
         keyboard_frame = QFrame()
-        keyboard_frame.setFixedHeight(220)
+        keyboard_frame.setMinimumHeight(280)
         keyboard_frame.setStyleSheet("""
             QFrame {
                 background: #000000;
@@ -159,13 +159,13 @@ class PredatorStaticTab(QWidget):
         
         # Create keyboard layout
         keyboard_layout = QVBoxLayout(keyboard_frame)
-        keyboard_layout.setContentsMargins(20, 20, 20, 20)
+        keyboard_layout.setContentsMargins(15, 15, 15, 15)
         
         # Keyboard visual representation
         self._keyboard_widget = self._create_keyboard_visual()
-        keyboard_layout.addWidget(self._keyboard_widget)
+        keyboard_layout.addWidget(self._keyboard_widget, 1)  # Stretch to fill
         
-        layout.addWidget(keyboard_frame)
+        layout.addWidget(keyboard_frame, 1)  # Give it more space
         
         # Zone controls
         zones_section = QHBoxLayout()
@@ -200,7 +200,7 @@ class PredatorStaticTab(QWidget):
     def _create_keyboard_visual(self):
         """Create a realistic full-sized keyboard with 4 zones matching the screenshot"""
         keyboard_widget = QWidget()
-        keyboard_widget.setFixedHeight(180)
+        keyboard_widget.setMinimumHeight(240)
         
         # Use a custom paint event to draw the keyboard
         def paint_keyboard(event):
@@ -210,11 +210,22 @@ class PredatorStaticTab(QWidget):
             # Black background
             painter.fillRect(0, 0, keyboard_widget.width(), keyboard_widget.height(), QColor("#000000"))
             
-            # Key dimensions (scaled to fit)
-            unit = 9  # Base unit size
-            gap = 1.5  # Gap between keys
-            start_x = 10
-            start_y = 10
+            # Calculate scaling based on available space
+            available_width = keyboard_widget.width() - 20
+            available_height = keyboard_widget.height() - 20
+            
+            # Keyboard dimensions in units (22 units wide for full keyboard, 7 units tall)
+            keyboard_width_units = 22.5
+            keyboard_height_units = 7
+            
+            # Calculate unit size to fit available space
+            unit_from_width = available_width / keyboard_width_units
+            unit_from_height = available_height / keyboard_height_units
+            unit = min(unit_from_width, unit_from_height)  # Use smaller to fit both dimensions
+            
+            gap = unit * 0.15  # Gap proportional to unit size
+            start_x = (keyboard_widget.width() - (keyboard_width_units * unit)) / 2
+            start_y = (keyboard_widget.height() - (keyboard_height_units * unit)) / 2
             
             # Define keyboard layout with proper key sizes
             # Format: (x_offset, y_offset, width_units, height_units, zone)

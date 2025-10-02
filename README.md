@@ -1,7 +1,7 @@
 # PredatorSense-Linux
 PredatorSense GUI App Implementation For Linux
 
-![](./preview.png)
+![](./imgs/preview.png)
 
 ### The GUI App For [**`Linuwu-Sense`**](https://github.com/0x7375646F/Linuwu-Sense)
 
