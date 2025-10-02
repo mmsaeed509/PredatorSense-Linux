@@ -148,7 +148,7 @@ class PredatorStaticTab(QWidget):
         
         # Keyboard visualization
         keyboard_frame = QFrame()
-        keyboard_frame.setMinimumHeight(280)
+        keyboard_frame.setMinimumHeight(230)
         keyboard_frame.setStyleSheet("""
             QFrame {
                 background: #000000;
@@ -159,7 +159,7 @@ class PredatorStaticTab(QWidget):
         
         # Create keyboard layout
         keyboard_layout = QVBoxLayout(keyboard_frame)
-        keyboard_layout.setContentsMargins(15, 15, 15, 15)
+        keyboard_layout.setContentsMargins(10, 10, 10, 10)
         
         # Keyboard visual representation
         self._keyboard_widget = self._create_keyboard_visual()
@@ -167,24 +167,37 @@ class PredatorStaticTab(QWidget):
         
         layout.addWidget(keyboard_frame, 1)  # Give it more space
         
-        # Zone controls
+        # Zone labels under the keyboard box
+        zone_labels_section = QHBoxLayout()
+        zone_labels_section.setSpacing(0)
+        zone_labels_section.setContentsMargins(0, 5, 0, 5)
+                
+        for i in range(4):
+            zone_label_container = QVBoxLayout()
+            zone_label_container.setSpacing(2)
+            zone_label_container.setAlignment(Qt.AlignCenter)
+            
+            # Zone number
+            zone_num = QLabel(f"Zone {i+1}")
+            zone_num.setAlignment(Qt.AlignCenter)
+            zone_num.setStyleSheet("color: #00B0C8; font-size: 10px; font-weight: bold;")
+            zone_label_container.addWidget(zone_num)
+            
+            zone_labels_section.addLayout(zone_label_container, 1)
+        
+        layout.addLayout(zone_labels_section)
+        
+        # Zone color controls
         zones_section = QHBoxLayout()
         zones_section.setSpacing(40)
-        zones_section.setContentsMargins(30, 20, 30, 20)
+        zones_section.setContentsMargins(30, 10, 30, 10)
         
-        zone_names = ["Left", "Center-Left", "Center-Right", "Right"]
         self._zone_color_buttons = []
         
         for i in range(4):
             zone_container = QVBoxLayout()
-            zone_container.setSpacing(12)
+            zone_container.setSpacing(8)
             zone_container.setAlignment(Qt.AlignCenter)
-            
-            # Zone label with name
-            zone_label = QLabel(f"Zone {i+1}\n{zone_names[i]}")
-            zone_label.setAlignment(Qt.AlignCenter)
-            zone_label.setStyleSheet("color: #00B0C8; font-size: 11px; font-weight: bold;")
-            zone_container.addWidget(zone_label)
             
             # Color picker button
             color_btn = SimpleColorButton(self._zone_colors[i], 50)
@@ -200,7 +213,7 @@ class PredatorStaticTab(QWidget):
     def _create_keyboard_visual(self):
         """Create a realistic full-sized keyboard with 4 zones matching the screenshot"""
         keyboard_widget = QWidget()
-        keyboard_widget.setMinimumHeight(240)
+        keyboard_widget.setMinimumSize(800, 200)  # Set minimum size
         
         # Use a custom paint event to draw the keyboard
         def paint_keyboard(event):
@@ -208,24 +221,32 @@ class PredatorStaticTab(QWidget):
             painter.setRenderHint(QPainter.Antialiasing)
             
             # Black background
-            painter.fillRect(0, 0, keyboard_widget.width(), keyboard_widget.height(), QColor("#000000"))
+            painter.fillRect(0, 0, keyboard_widget.width(), keyboard_widget.height(), QColor("#121212"))
             
-            # Calculate scaling based on available space
-            available_width = keyboard_widget.width() - 20
-            available_height = keyboard_widget.height() - 20
+            # Calculate scaling based on available space with better margins
+            margin = 10
+            available_width = keyboard_widget.width() - (margin * 2)
+            available_height = keyboard_widget.height() - (margin * 2)
             
-            # Keyboard dimensions in units (22 units wide for full keyboard, 7 units tall)
+            # Keyboard dimensions in units (22.5 units wide for full keyboard, 6.5 units tall)
             keyboard_width_units = 22.5
-            keyboard_height_units = 7
+            keyboard_height_units = 8
             
             # Calculate unit size to fit available space
             unit_from_width = available_width / keyboard_width_units
             unit_from_height = available_height / keyboard_height_units
             unit = min(unit_from_width, unit_from_height)  # Use smaller to fit both dimensions
             
-            gap = unit * 0.15  # Gap proportional to unit size
-            start_x = (keyboard_widget.width() - (keyboard_width_units * unit)) / 2
-            start_y = (keyboard_widget.height() - (keyboard_height_units * unit)) / 2
+            # Ensure minimum unit size for visibility
+            unit = max(unit, 8)
+            
+            gap = unit * 0.12  # Slightly smaller gap for better fit
+            
+            # Center the keyboard
+            keyboard_actual_width = keyboard_width_units * unit
+            keyboard_actual_height = keyboard_height_units * unit
+            start_x = (keyboard_widget.width() - keyboard_actual_width) / 2
+            start_y = (keyboard_widget.height() - keyboard_actual_height) / 2
             
             # Define keyboard layout with proper key sizes
             # Format: (x_offset, y_offset, width_units, height_units, zone)
