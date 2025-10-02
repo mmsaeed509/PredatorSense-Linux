@@ -114,7 +114,7 @@ class FanControlWindow(QWidget):
         cpu_column = QVBoxLayout()
         cpu_column.setAlignment(Qt.AlignCenter)
         
-        self.cpu_dial = FanDial("CPU")
+        self.cpu_dial = FanDial("CPU", 1200)  # Start with some RPM for immediate spinning
         self.cpu_dial.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         cpu_column.addWidget(self.cpu_dial)
         
@@ -148,7 +148,7 @@ class FanControlWindow(QWidget):
         gpu_column = QVBoxLayout()
         gpu_column.setAlignment(Qt.AlignCenter)
         
-        self.gpu_dial = FanDial("GPU")
+        self.gpu_dial = FanDial("GPU", 1000)  # Start with some RPM for immediate spinning
         self.gpu_dial.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         gpu_column.addWidget(self.gpu_dial)
         
@@ -245,19 +245,13 @@ class FanControlWindow(QWidget):
         """)
 
     def setRpm(self, cpu_rpm: int, gpu_rpm: int):
-        # Only update if values actually changed to avoid unnecessary repaints
+        """Update fan RPM values - always update to ensure smooth animation."""
         cpu_rpm = int(cpu_rpm)
         gpu_rpm = int(gpu_rpm)
         
-        if hasattr(self.cpu_dial, '_rpm') and self.cpu_dial._rpm != cpu_rpm:
-            self.cpu_dial.setRpm(cpu_rpm)
-        elif not hasattr(self.cpu_dial, '_rpm'):
-            self.cpu_dial.setRpm(cpu_rpm)
-            
-        if hasattr(self.gpu_dial, '_rpm') and self.gpu_dial._rpm != gpu_rpm:
-            self.gpu_dial.setRpm(gpu_rpm)
-        elif not hasattr(self.gpu_dial, '_rpm'):
-            self.gpu_dial.setRpm(gpu_rpm)
+        # Always update the dials - the FanDial class handles change detection internally
+        self.cpu_dial.setRpm(cpu_rpm)
+        self.gpu_dial.setRpm(gpu_rpm)
         
     def _on_mode_selected(self, mode: str):
         """Handle mode selection and update UI and settings."""

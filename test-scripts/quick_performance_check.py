@@ -16,7 +16,7 @@ def quick_test():
     start = time.time()
     try:
         subprocess.run([sys.executable, "-c", 
-                       "import sys; sys.path.insert(0, 'src'); "
+                       "import sys; sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'src')); "
                        "from app.ui.main_window import CustomShapeWindow; "
                        "print('Import successful')"], 
                       capture_output=True, timeout=5)
