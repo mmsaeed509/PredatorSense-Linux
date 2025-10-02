@@ -326,20 +326,69 @@ class ModeButton(QWidget):
     def _drawFanGlyph(self, p: QPainter, cx: int, cy: int, size: int, color: QColor):
         p.save()
         p.setRenderHint(QPainter.Antialiasing)
-        p.setPen(QPen(color, 2))
-        # ring
-        p.drawEllipse(cx - size//3, cy - size//3, 2*size//3, 2*size//3)
-        # small blades around
-        blades = 10
-        radius = size * 0.55
-        from math import cos, sin, radians
-        for i in range(blades):
-            a = radians(i * (360.0 / blades))
-            x1 = cx + int(radius * cos(a))
-            y1 = cy + int(radius * sin(a))
-            x2 = cx + int((radius - size * 0.25) * cos(a))
-            y2 = cy + int((radius - size * 0.25) * sin(a))
-            p.drawLine(x1, y1, x2, y2)
+        
+        # Different icons based on mode
+        if self._caption == "Auto":
+            # Auto mode: Fan with "A" overlay
+            p.setPen(QPen(color, 2))
+            # Outer ring
+            p.drawEllipse(cx - size//3, cy - size//3, 2*size//3, 2*size//3)
+            # Fan blades
+            blades = 8
+            radius = size * 0.45
+            from math import cos, sin, radians
+            for i in range(blades):
+                a = radians(i * (360.0 / blades))
+                x1 = cx + int(radius * cos(a))
+                y1 = cy + int(radius * sin(a))
+                x2 = cx + int((radius - size * 0.2) * cos(a))
+                y2 = cy + int((radius - size * 0.2) * sin(a))
+                p.drawLine(x1, y1, x2, y2)
+            # "A" in center
+            p.setFont(QFont(DEFAULT_FONT_FAMILY, 12, QFont.Bold))
+            p.setPen(color)
+            p.drawText(cx - 4, cy + 4, "A")
+            
+        elif self._caption == "Max":
+            # Max mode: Larger fan with more blades
+            p.setPen(QPen(color, 2))
+            # Outer ring
+            p.drawEllipse(cx - size//3, cy - size//3, 2*size//3, 2*size//3)
+            # More aggressive fan blades for "max"
+            blades = 12
+            radius = size * 0.5
+            from math import cos, sin, radians
+            for i in range(blades):
+                a = radians(i * (360.0 / blades))
+                x1 = cx + int(radius * cos(a))
+                y1 = cy + int(radius * sin(a))
+                x2 = cx + int((radius - size * 0.3) * cos(a))
+                y2 = cy + int((radius - size * 0.3) * sin(a))
+                p.drawLine(x1, y1, x2, y2)
+                
+        elif self._caption == "Custom":
+            # Custom mode: Fan with wrench/tool overlay
+            p.setPen(QPen(color, 2))
+            # Outer ring
+            p.drawEllipse(cx - size//3, cy - size//3, 2*size//3, 2*size//3)
+            # Fan blades
+            blades = 8
+            radius = size * 0.45
+            from math import cos, sin, radians
+            for i in range(blades):
+                a = radians(i * (360.0 / blades))
+                x1 = cx + int(radius * cos(a))
+                y1 = cy + int(radius * sin(a))
+                x2 = cx + int((radius - size * 0.2) * cos(a))
+                y2 = cy + int((radius - size * 0.2) * sin(a))
+                p.drawLine(x1, y1, x2, y2)
+            # Wrench/tool icon overlay
+            p.setPen(QPen(color, 3))
+            # Simple wrench shape
+            p.drawLine(cx - 8, cy - 8, cx + 8, cy + 8)
+            p.drawLine(cx - 6, cy - 10, cx - 4, cy - 8)
+            p.drawLine(cx + 4, cy + 8, cx + 6, cy + 10)
+        
         p.restore()
 
     def paintEvent(self, event):
@@ -347,39 +396,50 @@ class ModeButton(QWidget):
         # Only enable antialiasing for text, not for shapes (performance optimization)
         poly = self._panelPolygon()
 
-        # base panel
+        # Base panel - darker background to match screenshot
         p.setPen(Qt.NoPen)
-        p.setBrush(QColor(26, 26, 26))
+        if self.isEnabled() and self._checked:
+            # Selected state: darker background with subtle cyan tint
+            p.setBrush(QColor(15, 25, 28))
+        else:
+            # Normal state: very dark background
+            p.setBrush(QColor(18, 18, 18))
         p.drawPolygon(poly)
 
-        # border
+        # Border - cyan for selected, subtle gray for unselected
         if self.isEnabled() and self._checked:
             border = QPen(QColor("#00B0C8"), 2)
         else:
-            border = QPen(QColor(42, 42, 42), 2)
+            border = QPen(QColor(35, 35, 35), 1)
         p.setPen(border)
         p.setBrush(Qt.NoBrush)
         p.drawPolygon(poly)
 
-        # icon + glyph
-        cx, cy = self.width()//2, int(self.height()*0.42)
-        icon_color = QColor("#00B0C8") if (self.isEnabled() and self._checked) else QColor(100, 100, 100)
+        # Icon positioning - center the fan icon
+        cx, cy = self.width()//2, int(self.height()*0.40)
+        
+        # Icon color based on state
         if not self.isEnabled():
             icon_color = QColor(70, 70, 70)
-        self._drawFanGlyph(p, cx - 10, cy, 36, icon_color)
-        if self._subglyph:
-            p.setPen(icon_color)
-            p.setFont(self._font_sub)
-            p.drawText(cx + 4, cy + 6, self._subglyph)
+        elif self._checked:
+            icon_color = QColor("#00B0C8")
+        else:
+            icon_color = QColor(120, 120, 120)
+            
+        # Draw the fan icon
+        self._drawFanGlyph(p, cx, cy, 40, icon_color)
 
-        # caption under - enable antialiasing only for text
+        # Caption text - enable antialiasing only for text
         p.setRenderHint(QPainter.Antialiasing)
         p.setFont(self._font_caption)
+        
+        # Text color based on state
         if not self.isEnabled():
-            p.setPen(QColor(120, 120, 120))
+            p.setPen(QColor(100, 100, 100))
         elif self._checked:
             p.setPen(QColor("#00B0C8"))
         else:
-            p.setPen(QColor(150, 150, 150))
+            p.setPen(QColor(140, 140, 140))
+            
         tw = p.fontMetrics().width(self._caption)
-        p.drawText(self.width()//2 - tw//2, self.height() - 14, self._caption)
+        p.drawText(self.width()//2 - tw//2, self.height() - 16, self._caption)

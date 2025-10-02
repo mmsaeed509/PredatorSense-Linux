@@ -267,8 +267,8 @@ class CustomShapeWindow(QMainWindow):
         painter = QPainter(self)
         # Only enable antialiasing for text, not for shapes (performance optimization)
         
-        # Background gradient (dark) - simplified
-        painter.fillRect(self.rect(), QColor("#1a1a1a"))  # Solid color instead of gradient for performance
+        # Background gradient (dark) - matching screenshot theme
+        painter.fillRect(self.rect(), QColor("#0a0a0a"))  # Darker background to match AeroBlade theme
 
         # Draw the logo in the top left corner, slightly moved to the right
         if self.logo_pixmap:
@@ -320,12 +320,16 @@ class CustomShapeWindow(QMainWindow):
             """
             QWidget { background-color: transparent; }
             QPushButton {
-                color: #cfcfcf; background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 10px;
-                padding: 10px 14px; text-align: left; font-size: 14px;
+                color: #cfcfcf; background: #0f0f0f; border: 1px solid #1a1a1a; border-radius: 8px;
+                padding: 12px 16px; text-align: left; font-size: 14px;
             }
-            QPushButton:hover { border-color: #00B0C8; }
+            QPushButton:hover { 
+                border-color: #00B0C8; 
+                background: #121212;
+            }
             QPushButton:checked {
-                background: #0e2c31; border: 1px solid #00B0C8; color: #e6feff;
+                background: #0a1f22; border: 1px solid #00B0C8; color: #00B0C8;
+                font-weight: bold;
             }
             """
         )

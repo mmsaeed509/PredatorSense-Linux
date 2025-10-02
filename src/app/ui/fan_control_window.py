@@ -6,6 +6,39 @@ from app.utils.ui_utils import FanDial, ModeButton
 from app.utils.config_utils import config_manager
 from app.core import CoreController
 from config import DEFAULT_FONT_FAMILY
+import math
+
+
+class CustomFanIcon(QWidget):
+    """Custom fan icon widget that matches the AeroBlade design."""
+    
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setFixedSize(32, 32)
+    
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.Antialiasing)
+        
+        # Draw fan icon similar to screenshot
+        cx, cy = self.width() // 2, self.height() // 2
+        radius = min(self.width(), self.height()) // 3
+        
+        # Outer ring
+        painter.setPen(QPen(QColor("#00B0C8"), 2))
+        painter.setBrush(Qt.NoBrush)
+        painter.drawEllipse(cx - radius, cy - radius, 2 * radius, 2 * radius)
+        
+        # Fan blades
+        blades = 8
+        blade_radius = radius + 4
+        for i in range(blades):
+            angle = math.radians(i * (360.0 / blades))
+            x1 = cx + int(blade_radius * math.cos(angle))
+            y1 = cy + int(blade_radius * math.sin(angle))
+            x2 = cx + int((blade_radius - 6) * math.cos(angle + math.radians(15)))
+            y2 = cy + int((blade_radius - 6) * math.sin(angle + math.radians(15)))
+            painter.drawLine(x1, y1, x2, y2)
 
 
 class FanControlWindow(QWidget):
@@ -58,6 +91,7 @@ class FanControlWindow(QWidget):
     def _build_ui(self):
         font_title = QFont(DEFAULT_FONT_FAMILY, 12)
         font_label = QFont(DEFAULT_FONT_FAMILY, 10)
+        font_brand = QFont(DEFAULT_FONT_FAMILY, 16, QFont.Bold)
 
         wrapper = QWidget(self)
         wrapper.setAttribute(Qt.WA_TranslucentBackground)
@@ -67,21 +101,47 @@ class FanControlWindow(QWidget):
         vbox.setContentsMargins(20, 16, 20, 16)
         vbox.setSpacing(18)
 
-        # Header
-        header = QLabel("Fan speed")
-        header.setAlignment(Qt.AlignHCenter | Qt.AlignVCenter)
-        header.setFont(font_title)
-        header.setStyleSheet("color: #9aa0a6;")
-        vbox.addWidget(header)
+        # Top row with AeroBlade™ 3D Fan in top right
+        top_row = QHBoxLayout()
+        top_row.setContentsMargins(0, 0, 0, 10)
+        
+        # Add stretch to push content to the right
+        top_row.addStretch()
+        
+        # Custom fan icon widget
+        fan_icon = CustomFanIcon()
+        fan_icon.setFixedSize(24, 24)
+        top_row.addWidget(fan_icon)
+        
+        # Brand text
+        brand_label = QLabel("AeroBlade™ 3D Fan")
+        brand_label.setFont(font_brand)
+        brand_label.setStyleSheet("color: #00B0C8; margin-left: 8px;")
+        top_row.addWidget(brand_label)
+        
+        vbox.addLayout(top_row)
 
-        # Mode selector row
+        # Fan speed header (centered)
+        speed_header = QLabel("Fan speed")
+        speed_header.setAlignment(Qt.AlignCenter)
+        speed_header.setFont(font_title)
+        speed_header.setStyleSheet("color: #9aa0a6; margin-top: 20px;")
+        vbox.addWidget(speed_header)
+
+        # Mode selector row - matching screenshot layout
         mode_row = QHBoxLayout()
-        mode_row.setSpacing(18)
+        mode_row.setSpacing(20)
+        mode_row.setContentsMargins(40, 10, 40, 10)
 
-        # Custom predator-style mode buttons
-        self.btn_auto = ModeButton("Auto", subglyph="A")
-        self.btn_max = ModeButton("Max")
+        # Custom predator-style mode buttons with proper sizing
+        self.btn_auto = ModeButton("Auto")
+        self.btn_max = ModeButton("Max") 
         self.btn_custom = ModeButton("Custom")
+        
+        # Set consistent button sizes to match screenshot
+        for btn in [self.btn_auto, self.btn_max, self.btn_custom]:
+            btn.setFixedSize(120, 80)
+        
         self.btn_auto.setChecked(True)
         self.btn_custom.setEnabled(True)  # Enable custom mode button
         
@@ -97,11 +157,10 @@ class FanControlWindow(QWidget):
         self.btn_max.clicked.connect(lambda: self._on_mode_selected('max'))
         self.btn_custom.clicked.connect(lambda: self._on_mode_selected('custom'))
 
+        # Center the buttons horizontally like in screenshot
         mode_row.addStretch(1)
         mode_row.addWidget(self.btn_auto)
-        mode_row.addSpacing(12)
         mode_row.addWidget(self.btn_max)
-        mode_row.addSpacing(12)
         mode_row.addWidget(self.btn_custom)
         mode_row.addStretch(1)
         vbox.addLayout(mode_row)
@@ -356,12 +415,12 @@ class FanControlWindow(QWidget):
     def paintEvent(self, event):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.Antialiasing)
-        # Panel fill
+        # Panel fill - darker background to match screenshot
         painter.setBrush(QBrush(QColor("#121212")))
         painter.setPen(Qt.NoPen)
         painter.drawPolygon(self.polygon)
-        # Cyan border
-        pen = QPen(QColor("#00B0C8"), 3)
+        # Cyan border with subtle glow effect
+        pen = QPen(QColor("#00B0C8"), 2)
         painter.setPen(pen)
         painter.setBrush(Qt.NoBrush)
         painter.drawPolygon(self.polygon)
