@@ -25,7 +25,12 @@ class FanService(QObject):
         super().__init__(parent)
         self._timer = QTimer(self)
         self._timer.timeout.connect(self._poll)
-        self._timer.setInterval(2000)  # 2s - reduced frequency for better performance
+        self._timer.setInterval(4000)  # 4s - further reduced for better performance
+        
+        # Performance optimizations
+        self._last_rpm_values = (0, 0)
+        self._poll_failures = 0
+        self._max_failures = 3
 
     # Lifecycle
     def start(self):
@@ -76,10 +81,21 @@ class FanService(QObject):
             return False
 
     def _poll(self):
+        """Optimized polling with failure handling and change detection."""
         vals = self._read_rpm_from_sensors()
         if vals is not None:
             cpu, gpu = vals
-            self.rpmUpdated.emit(cpu, gpu)
+            # Only emit if values changed significantly (reduce unnecessary updates)
+            if (abs(cpu - self._last_rpm_values[0]) > 50 or 
+                abs(gpu - self._last_rpm_values[1]) > 50):
+                self._last_rpm_values = (cpu, gpu)
+                self.rpmUpdated.emit(cpu, gpu)
+            self._poll_failures = 0
+        else:
+            self._poll_failures += 1
+            # If polling fails repeatedly, increase interval to reduce CPU usage
+            if self._poll_failures >= self._max_failures:
+                self._timer.setInterval(8000)  # Slow down to 8s on repeated failures
 
     def _read_rpm_from_sensors(self) -> Optional[Tuple[int, int]]:
         """Parse `sensors -j` for acer-isa-0ace fan1_input/fan2_input."""

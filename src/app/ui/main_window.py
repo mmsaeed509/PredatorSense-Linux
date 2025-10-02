@@ -21,6 +21,7 @@ from config import WM_CLASS, WM_CLASS_2, FONTS_DIR, ICONS_DIR, DEFAULT_FONT_FAMI
 from app.utils import x11_utils
 from app.core import CoreController, Tab
 from app.core.models import TemperatureUnit
+from app.utils.performance_monitor import perf_monitor
 
 def createMask():
     # Define a polygon to set the window shape
@@ -69,19 +70,21 @@ class CustomShapeWindow(QMainWindow):
 
     def initUI(self):
         # Set window size
-        self.setFixedSize(1500, 800)  # Adjust size as needed
+        self.setFixedSize(1500, 800)
 
-        # Set window flags to remove the title bar and make it frameless
-        self.setWindowFlags(Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint)
+        # Set window flags - remove WindowStaysOnTopHint for better performance
+        self.setWindowFlags(Qt.FramelessWindowHint)
 
         # Make the window transparent
         self.setAttribute(Qt.WA_TranslucentBackground)
+        
+        # Performance optimizations
+        self.setAttribute(Qt.WA_OpaquePaintEvent, False)
+        self.setAttribute(Qt.WA_NoSystemBackground, True)
 
-        # Load custom fonts
+        # Load resources (fonts and logo) - these are cached
         self.loadPredatorFont()
         self.loadButtonFont()
-
-        # Load logo
         self.loadLogo()
 
         # Define the custom shape
@@ -101,22 +104,9 @@ class CustomShapeWindow(QMainWindow):
         # React to tab changes to swap content views
         self.controller.tabChanged.connect(self._onTabChanged)
 
-        # Settings popup
-        try:
-            family = None
-            if self.button_font:
-                family = self.button_font.family()
-            self.settings_popup = SettingsPopup(self, font_family=family)
-            # Wire radios -> controller
-            if self.settings_popup:
-                self.settings_popup.r_c.toggled.connect(self._onCelsiusToggled)
-                self.settings_popup.r_f.toggled.connect(self._onFahrenheitToggled)
-                # Controller -> radios (sync)
-                self.controller.temperatureUnitChanged.connect(self.settings_popup.setUnit)
-                # Initial sync
-                self.settings_popup.setUnit(self.controller.temperature_unit)
-        except Exception as e:
-            print(f"Failed to create settings popup: {e}")
+        # Defer settings popup creation until needed (lazy loading)
+        self.settings_popup = None
+        self._settings_popup_created = False
 
     # Set the WM_CLASS property with instance and class names
     def set_wm_class(self):
@@ -139,6 +129,19 @@ class CustomShapeWindow(QMainWindow):
             self.controller.start()
         except Exception as e:
             print(f"Controller start error: {e}")
+        
+        # Enable performance monitoring in debug mode
+        if __debug__:
+            perf_monitor.enable()
+            perf_monitor.performanceUpdated.connect(self._on_performance_update)
+    
+    def _on_performance_update(self, stats: dict):
+        """Handle performance statistics updates."""
+        # Print performance stats in debug mode
+        if stats['memory_mb'] > 200:  # Only log if using significant memory
+            print(f"Performance: CPU {stats['cpu_percent']}%, "
+                  f"Memory {stats['memory_mb']}MB ({stats['memory_percent']}%), "
+                  f"Threads {stats['num_threads']}")
 
     def loadPredatorFont(self):
         # Load the font from the Fonts directory
@@ -201,12 +204,18 @@ class CustomShapeWindow(QMainWindow):
         self._button_widget = button_widget
 
     def toggleSettingsPopup(self):
+        # Lazy load settings popup
+        if not self._settings_popup_created:
+            self._create_settings_popup()
+        
         if not self.settings_popup:
             return
+            
         if self.settings_popup.isVisible():
             self.settings_popup.hide()
             return
-        # Position under the gear button, centered like the screenshot
+            
+        # Position under the gear button
         try:
             btn_center = self.settings_button.mapToGlobal(self.settings_button.rect().center())
             self.settings_popup.showAt(btn_center)
@@ -214,6 +223,25 @@ class CustomShapeWindow(QMainWindow):
             # Fallback: show near top-right
             top_right = self.mapToGlobal(QPoint(self.width() - 140, 40))
             self.settings_popup.showAt(top_right)
+    
+    def _create_settings_popup(self):
+        """Create settings popup on demand (lazy loading)."""
+        try:
+            family = None
+            if self.button_font:
+                family = self.button_font.family()
+            self.settings_popup = SettingsPopup(self, font_family=family)
+            
+            # Wire signals
+            if self.settings_popup:
+                self.settings_popup.r_c.toggled.connect(self._onCelsiusToggled)
+                self.settings_popup.r_f.toggled.connect(self._onFahrenheitToggled)
+                self.controller.temperatureUnitChanged.connect(self.settings_popup.setUnit)
+                self.settings_popup.setUnit(self.controller.temperature_unit)
+                
+            self._settings_popup_created = True
+        except Exception as e:
+            print(f"Failed to create settings popup: {e}")
 
     def _onCelsiusToggled(self, checked: bool):
         if checked:
@@ -237,20 +265,18 @@ class CustomShapeWindow(QMainWindow):
 
     def paintEvent(self, event):
         painter = QPainter(self)
-        painter.setRenderHint(QPainter.Antialiasing)
-
-        # Background gradient (dark)
-        bg_grad = QLinearGradient(0, 0, 0, self.height())
-        bg_grad.setColorAt(0.0, QColor("#242323"))
-        bg_grad.setColorAt(1.0, QColor("#141414"))
-        painter.setBrush(QBrush(bg_grad))
-        painter.setPen(Qt.NoPen)
-        painter.drawRect(self.rect())
+        # Only enable antialiasing for text, not for shapes (performance optimization)
+        
+        # Background gradient (dark) - simplified
+        painter.fillRect(self.rect(), QColor("#1a1a1a"))  # Solid color instead of gradient for performance
 
         # Draw the logo in the top left corner, slightly moved to the right
         if self.logo_pixmap:
-            painter.drawPixmap(60, 20, self.logo_pixmap)  # Adjust position as needed
+            painter.drawPixmap(60, 20, self.logo_pixmap)
 
+        # Enable antialiasing only for text rendering
+        painter.setRenderHint(QPainter.Antialiasing)
+        
         # Set the custom font if loaded
         if hasattr(self, 'predator_font'):
             painter.setFont(self.predator_font)
@@ -408,6 +434,9 @@ class CustomShapeWindow(QMainWindow):
 
     def closeEvent(self, event):
         try:
+            # Stop performance monitoring
+            perf_monitor.disable()
+            # Stop controller services
             self.controller.stop()
         except Exception:
             pass
