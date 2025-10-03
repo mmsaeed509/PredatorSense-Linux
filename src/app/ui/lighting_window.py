@@ -217,10 +217,50 @@ class SimpleColorButton(QPushButton):
         """)
     
     def _pick_color(self):
-        color = QColorDialog.getColor(QColor(self._color), self, "Choose Color")
-        if color.isValid():
-            self._color = color.name()
-            self._update_style()
+        dialog = QColorDialog(QColor(self._color), self)
+        dialog.setWindowTitle("Choose Color")
+        dialog.setOption(QColorDialog.DontUseNativeDialog)
+        
+        # Apply dark theme stylesheet
+        dialog.setStyleSheet("""
+            QColorDialog {
+                background-color: #1a1a1a;
+                color: #e0e0e0;
+            }
+            QLabel {
+                color: #e0e0e0;
+            }
+            QPushButton {
+                background-color: #2a2a2a;
+                color: #e0e0e0;
+                border: 1px solid #3a3a3a;
+                border-radius: 4px;
+                padding: 6px 12px;
+            }
+            QPushButton:hover {
+                background-color: #3a3a3a;
+                border-color: #00B0C8;
+            }
+            QPushButton:pressed {
+                background-color: #00B0C8;
+            }
+            QSpinBox, QLineEdit {
+                background-color: #2a2a2a;
+                color: #e0e0e0;
+                border: 1px solid #3a3a3a;
+                border-radius: 4px;
+                padding: 4px;
+            }
+            QSpinBox:focus, QLineEdit:focus {
+                border-color: #00B0C8;
+            }
+        """)
+        
+        if dialog.exec_():
+            color = dialog.currentColor()
+            if color.isValid():
+                self._color = color.name()
+                self._update_style()
     
     def get_color(self) -> str:
         return self._color
@@ -1017,9 +1057,48 @@ class CleanDynamicTab(QWidget):
         self._apply_effect()
     
     def _open_color_dialog(self):
-        color = QColorDialog.getColor(QColor(self._current_color), self, "Choose Color")
-        if color.isValid():
-            self._select_color(color.name())
+        dialog = QColorDialog(QColor(self._current_color), self)
+        dialog.setWindowTitle("Choose Color")
+        dialog.setOption(QColorDialog.DontUseNativeDialog)
+        
+        dialog.setStyleSheet("""
+            QColorDialog {
+                background-color: #1a1a1a;
+                color: #e0e0e0;
+            }
+            QLabel {
+                color: #e0e0e0;
+            }
+            QPushButton {
+                background-color: #2a2a2a;
+                color: #e0e0e0;
+                border: 1px solid #3a3a3a;
+                border-radius: 4px;
+                padding: 6px 12px;
+            }
+            QPushButton:hover {
+                background-color: #3a3a3a;
+                border-color: #00B0C8;
+            }
+            QPushButton:pressed {
+                background-color: #00B0C8;
+            }
+            QSpinBox, QLineEdit {
+                background-color: #2a2a2a;
+                color: #e0e0e0;
+                border: 1px solid #3a3a3a;
+                border-radius: 4px;
+                padding: 4px;
+            }
+            QSpinBox:focus, QLineEdit:focus {
+                border-color: #00B0C8;
+            }
+        """)
+        
+        if dialog.exec_():
+            color = dialog.currentColor()
+            if color.isValid():
+                self._select_color(color.name())
     
     def _set_direction(self, direction):
         self._direction = direction
