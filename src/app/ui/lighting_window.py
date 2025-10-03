@@ -631,13 +631,13 @@ class CleanDynamicTab(QWidget):
         direction_buttons_layout = QHBoxLayout()
         direction_buttons_layout.setSpacing(10)
         
-        self._left_btn = QPushButton("←")
+        self._left_btn = QPushButton("→")
         self._left_btn.setFixedSize(50, 30)
         self._left_btn.setCheckable(True)
         self._left_btn.setStyleSheet(self._direction_button_style())
         self._left_btn.clicked.connect(lambda checked: self._set_direction(1) if checked else None)  # 1 = right to left
         
-        self._right_btn = QPushButton("→")
+        self._right_btn = QPushButton("←")
         self._right_btn.setFixedSize(50, 30)
         self._right_btn.setCheckable(True)
         self._right_btn.setStyleSheet(self._direction_button_style())
