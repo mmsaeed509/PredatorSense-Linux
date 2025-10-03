@@ -2,13 +2,80 @@
 RGB Keyboard Lighting Control Window - Clean & Modern Design
 Supports Static (per-zone) and Dynamic (four-zone) modes
 """
-from PyQt5.QtCore import Qt, QPoint, QTimer, QRect, pyqtSignal
-from PyQt5.QtGui import QPainter, QColor, QBrush, QRegion, QPolygon, QPen, QFont, QLinearGradient, QImage, QPixmap
+from PyQt5.QtCore import Qt, QPoint, QTimer, QRect, pyqtSignal, QPointF
+from PyQt5.QtGui import QPainter, QColor, QBrush, QRegion, QPolygon, QPen, QFont, QLinearGradient, QImage, QPixmap, QPainterPath, QPolygonF
 from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, 
                           QTabWidget, QSlider, QComboBox, QColorDialog, QGridLayout,
                           QFrame, QSizePolicy, QSpacerItem, QDialog, QLineEdit, QSpinBox)
 from app.core import CoreController
 from config import DEFAULT_FONT_FAMILY
+import math
+
+
+class HexTabButton(QPushButton):
+    """Custom tab button with hexagonal icon"""
+    
+    def __init__(self, text, active=False, parent=None):
+        super().__init__(text, parent)
+        self._active = active
+        self.setFixedHeight(50)
+        self.setMinimumWidth(150)
+        self.setCursor(Qt.PointingHandCursor)
+        self.setStyleSheet("""
+            QPushButton {
+                background: transparent;
+                border: none;
+                color: #9a9a9a;
+                font-size: 16px;
+                font-weight: bold;
+                text-align: left;
+                padding-left: 60px;
+            }
+            QPushButton:hover {
+                color: #ffffff;
+            }
+        """)
+    
+    def setActive(self, active):
+        self._active = active
+        self.update()
+    
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.Antialiasing)
+        
+        # Draw hexagon icon
+        hex_center_x = 30
+        hex_center_y = self.height() // 2
+        hex_size = 18
+        
+        # Create hexagon path
+        hexagon = QPolygonF()
+        for i in range(6):
+            angle = math.pi / 3 * i
+            x = hex_center_x + hex_size * math.cos(angle)
+            y = hex_center_y + hex_size * math.sin(angle)
+            hexagon.append(QPointF(x, y))
+        
+        # Fill hexagon
+        if self._active:
+            painter.setBrush(QBrush(QColor("#00B0C8")))
+            painter.setPen(QPen(QColor("#00B0C8"), 2))
+        else:
+            painter.setBrush(QBrush(QColor("#4a4a4a")))
+            painter.setPen(QPen(QColor("#4a4a4a"), 2))
+        
+        painter.drawPolygon(hexagon)
+        
+        # Draw text
+        if self._active:
+            painter.setPen(QColor("#00B0C8"))
+        else:
+            painter.setPen(QColor("#9a9a9a"))
+        
+        painter.setFont(QFont(DEFAULT_FONT_FAMILY, 16, QFont.Bold))
+        text_rect = QRect(60, 0, self.width() - 60, self.height())
+        painter.drawText(text_rect, Qt.AlignLeft | Qt.AlignVCenter, self.text())
 
 class ColorSVPicker(QWidget):
     """Saturation/Value color picker widget"""
@@ -1074,43 +1141,54 @@ class LightingWindow(QWidget):
             layout.addStretch()
             return
         
-        # Tab widget for Static/Dynamic modes
-        self._tab_widget = QTabWidget()
-        self._tab_widget.setStyleSheet("""
-            QTabWidget::pane {
-                border: none;
-                background: transparent;
-            }
-            QTabBar::tab {
-                background: #2a2a2a;
-                color: #cfcfcf;
-                border: none;
-                padding: 12px 30px;
-                margin-right: 4px;
-                border-top-left-radius: 12px;
-                border-top-right-radius: 12px;
-                font-size: 14px;
-                font-weight: bold;
-            }
-            QTabBar::tab:selected {
-                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                    stop:0 #00B0C8, stop:1 #008a9c);
-                color: #000000;
-            }
-            QTabBar::tab:hover:!selected {
-                background: #3a3a3a;
-                color: #ffffff;
-            }
-        """)
+        # Custom tab buttons with hexagonal icons
+        tab_container = QWidget()
+        tab_container.setAttribute(Qt.WA_TranslucentBackground)
+        tab_layout = QVBoxLayout(tab_container)
+        tab_layout.setContentsMargins(0, 0, 0, 0)
+        tab_layout.setSpacing(0)
+        
+        # Tab buttons row
+        tab_buttons_row = QHBoxLayout()
+        tab_buttons_row.setContentsMargins(20, 10, 0, 0)
+        tab_buttons_row.setSpacing(15)
+        
+        # Static tab button
+        self._static_btn = HexTabButton("Static", False)
+        self._static_btn.clicked.connect(lambda: self._switch_tab(0))
+        tab_buttons_row.addWidget(self._static_btn)
+        
+        # Dynamic tab button
+        self._dynamic_btn = HexTabButton("Dynamic", False)
+        self._dynamic_btn.clicked.connect(lambda: self._switch_tab(1))
+        tab_buttons_row.addWidget(self._dynamic_btn)
+        
+        tab_buttons_row.addStretch()
+        tab_layout.addLayout(tab_buttons_row)
+        
+        # Stacked widget for tab content
+        from PyQt5.QtWidgets import QStackedWidget
+        self._tab_stack = QStackedWidget()
+        self._tab_stack.setStyleSheet("background: transparent; border: none;")
         
         # Add tabs
         self._static_tab = PredatorStaticTab(self.controller)
         self._dynamic_tab = CleanDynamicTab(self.controller)
         
-        self._tab_widget.addTab(self._static_tab, "Static")
-        self._tab_widget.addTab(self._dynamic_tab, "Dynamic")
+        self._tab_stack.addWidget(self._static_tab)
+        self._tab_stack.addWidget(self._dynamic_tab)
         
-        layout.addWidget(self._tab_widget)
+        tab_layout.addWidget(self._tab_stack)
+        layout.addWidget(tab_container)
+        
+        # Set initial tab
+        self._switch_tab(0)
+    
+    def _switch_tab(self, index):
+        """Switch between Static and Dynamic tabs"""
+        self._tab_stack.setCurrentIndex(index)
+        self._static_btn.setActive(index == 0)
+        self._dynamic_btn.setActive(index == 1)
     
     def paintEvent(self, event):
         painter = QPainter(self)

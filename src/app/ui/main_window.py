@@ -442,7 +442,7 @@ class CustomShapeWindow(QMainWindow):
             self._ensureOverclockWindow()
             self._swapContent(self.overclock_window)
         else:
-            # Default to the Home internal window for all other tabs
+            # Use internal window for Home and Game and Apps Sync tabs
             self._swapContent(self.internal_window)
 
     def closeEvent(self, event):

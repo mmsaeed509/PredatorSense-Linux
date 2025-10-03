@@ -1,8 +1,8 @@
 from PyQt5.QtCore import Qt, QPoint
 from PyQt5.QtGui import QPainter, QColor, QBrush, QRegion, QPolygon, QPen, QFont
-from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QComboBox, QFrame, QSizePolicy
+from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QComboBox, QFrame, QSizePolicy, QStackedWidget
 from app.utils.ui_utils import CircularGauge
-from app.core import CoreController, LightingProfile, OverclockLevel
+from app.core import CoreController, LightingProfile, OverclockLevel, Tab
 from app.core.models import TemperatureUnit
 from config import DEFAULT_FONT_FAMILY
 
@@ -49,7 +49,15 @@ class InternalWindow(QWidget):
         wrapper.setAttribute(Qt.WA_TranslucentBackground)
         wrapper.setGeometry(30, 20, self.width() - 60, self.height() - 40)
 
-        vbox = QVBoxLayout(wrapper)
+        # Use stacked widget to switch between home and coming soon views
+        self.stacked_widget = QStackedWidget(wrapper)
+        self.stacked_widget.setGeometry(0, 0, wrapper.width(), wrapper.height())
+        self.stacked_widget.setAttribute(Qt.WA_TranslucentBackground)
+        
+        # Home content (index 0)
+        home_widget = QWidget()
+        home_widget.setAttribute(Qt.WA_TranslucentBackground)
+        vbox = QVBoxLayout(home_widget)
         vbox.setContentsMargins(20, 16, 20, 16)
         vbox.setSpacing(18)
 
@@ -125,6 +133,59 @@ class InternalWindow(QWidget):
         bottom.addLayout(lp_box, 1)
         bottom.addLayout(oc_box, 1)
         vbox.addLayout(bottom)
+        
+        self.stacked_widget.addWidget(home_widget)
+        
+        # Coming Soon content (index 1) for Game and Apps Sync
+        coming_soon_widget = self._buildComingSoonContent()
+        self.stacked_widget.addWidget(coming_soon_widget)
+        
+        # Show home by default
+        self.stacked_widget.setCurrentIndex(0)
+    
+    def _buildComingSoonContent(self):
+        """Build the coming soon view for Game and Apps Sync"""
+        widget = QWidget()
+        widget.setAttribute(Qt.WA_TranslucentBackground)
+        
+        layout = QVBoxLayout(widget)
+        layout.setContentsMargins(40, 40, 40, 40)
+        layout.setSpacing(20)
+        layout.setAlignment(Qt.AlignCenter)
+        
+        # Icon/Emoji
+        icon_label = QLabel("🎮")
+        icon_label.setAlignment(Qt.AlignCenter)
+        icon_label.setStyleSheet("font-size: 80px; background: transparent; border: none;")
+        layout.addWidget(icon_label)
+        
+        # Title
+        title = QLabel("Game and Apps Sync")
+        title.setFont(QFont(DEFAULT_FONT_FAMILY, 24, QFont.Bold))
+        title.setStyleSheet("color: #00B0C8; background: transparent; border: none;")
+        title.setAlignment(Qt.AlignCenter)
+        layout.addWidget(title)
+        
+        # Coming Soon message
+        coming_soon = QLabel("Coming Soon")
+        coming_soon.setFont(QFont(DEFAULT_FONT_FAMILY, 18, QFont.Bold))
+        coming_soon.setStyleSheet("color: #ffffff; background: transparent; border: none;")
+        coming_soon.setAlignment(Qt.AlignCenter)
+        layout.addWidget(coming_soon)
+        
+        # Description
+        description = QLabel(
+            "Automatic profile switching based on\n"
+            "running applications and games.\n\n"
+            "This feature will be implemented in a future update."
+        )
+        description.setFont(QFont(DEFAULT_FONT_FAMILY, 12))
+        description.setStyleSheet("color: #acacac; background: transparent; border: none;")
+        description.setAlignment(Qt.AlignCenter)
+        description.setWordWrap(True)
+        layout.addWidget(description)
+        
+        return widget
 
     def _wireController(self):
         if not self.controller:
@@ -172,6 +233,16 @@ class InternalWindow(QWidget):
         except Exception:
             self._applyTempUnit(TemperatureUnit.CELSIUS)
         self.controller.temperatureUnitChanged.connect(self._applyTempUnit)
+        
+        # React to tab changes to show appropriate content
+        self.controller.tabChanged.connect(self._onTabChanged)
+    
+    def _onTabChanged(self, tab: Tab):
+        """Switch content based on current tab"""
+        if tab == Tab.GAME_APP_SYNC:
+            self.stacked_widget.setCurrentIndex(1)  # Show coming soon
+        elif tab == Tab.HOME:
+            self.stacked_widget.setCurrentIndex(0)  # Show home content
 
     def _onLightingChanged(self, idx: int):
         if not self.controller:
