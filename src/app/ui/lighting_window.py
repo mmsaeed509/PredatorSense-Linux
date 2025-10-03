@@ -530,7 +530,7 @@ class CleanDynamicTab(QWidget):
         effects_frame.setStyleSheet("""
             QFrame {
                 background: #1a1a1a;
-                border: 1px solid #00B0C8;
+                border: 1px solid #1A1A1A;
                 border-radius: 8px;
             }
         """)
@@ -561,7 +561,7 @@ class CleanDynamicTab(QWidget):
             col = i % 3
             
             btn = QPushButton(name)
-            btn.setFixedSize(120, 35)
+            btn.setFixedSize(120, 25)
             btn.setCheckable(True)
             btn.setStyleSheet(self._effect_button_style())
             btn.clicked.connect(lambda checked, m=mode_id: self._select_effect(m))
@@ -587,7 +587,7 @@ class CleanDynamicTab(QWidget):
         speed_frame.setStyleSheet("""
             QFrame {
                 background: #1a1a1a;
-                border: 1px solid #00B0C8;
+                border: 1px solid #1A1A1A;
                 border-radius: 8px;
             }
         """)
@@ -614,7 +614,7 @@ class CleanDynamicTab(QWidget):
         direction_frame.setStyleSheet("""
             QFrame {
                 background: #1a1a1a;
-                border: 1px solid #00B0C8;
+                border: 1px solid #1A1A1A;
                 border-radius: 8px;
             }
         """)
@@ -669,7 +669,7 @@ class CleanDynamicTab(QWidget):
         basic_colors_frame.setStyleSheet("""
             QFrame {
                 background: #1a1a1a;
-                border: 1px solid #00B0C8;
+                border: 1px solid #1A1A1A;
                 border-radius: 8px;
             }
         """)
@@ -679,15 +679,18 @@ class CleanDynamicTab(QWidget):
         
         basic_title = QLabel("Basic colors")
         basic_title.setFont(QFont(DEFAULT_FONT_FAMILY, 11, QFont.Bold))
-        basic_title.setStyleSheet("color: #888888;")
+        basic_title.setStyleSheet("color: #00B0C8;")
         basic_colors_layout.addWidget(basic_title)
         
         # Basic color buttons
         basic_colors_grid = QHBoxLayout()
         basic_colors_grid.setSpacing(5)
         
-        basic_colors = ["#00ffff", "#ff0000", "#ff8000", "#ffff00", "#00ff00", 
-                       "#0000ff", "#ff00ff", "#8000ff", "#ffffff"]
+        basic_colors = [
+                        "#00ffff", "#ff0000", "#ff8000", 
+                        "#ffff00", "#00ff00", "#0000ff", 
+                        "#ff00ff", "#8000ff", "#ffffff"
+                        ]
         
         self._basic_color_buttons = []
         for color in basic_colors:
@@ -709,10 +712,9 @@ class CleanDynamicTab(QWidget):
         
         basic_colors_grid.addStretch()
         basic_colors_layout.addLayout(basic_colors_grid)
-        color_sections_layout.addWidget(basic_colors_frame)
         
         # More color button
-        more_color_btn = QPushButton("     More color...")
+        more_color_btn = QPushButton("     More colors ")
         more_color_btn.setFixedHeight(35)
         more_color_btn.setStyleSheet("""
             QPushButton {
@@ -729,7 +731,9 @@ class CleanDynamicTab(QWidget):
             }
         """)
         more_color_btn.clicked.connect(self._open_color_dialog)
-        color_sections_layout.addWidget(more_color_btn)
+        basic_colors_layout.addWidget(more_color_btn)
+        
+        color_sections_layout.addWidget(basic_colors_frame)
         
         content_layout.addWidget(self._color_sections_widget)
         content_layout.addStretch()
