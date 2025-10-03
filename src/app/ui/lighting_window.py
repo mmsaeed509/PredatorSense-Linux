@@ -710,19 +710,16 @@ class CleanDynamicTab(QWidget):
             basic_colors_grid.addWidget(btn)
             self._basic_color_buttons.append(btn)
         
-        basic_colors_grid.addStretch()
-        basic_colors_layout.addLayout(basic_colors_grid)
-        
-        # More color button
-        more_color_btn = QPushButton("     More colors ")
-        more_color_btn.setFixedHeight(35)
+        # More color button (on the right side)
+        more_color_btn = QPushButton("     More colors")
+        more_color_btn.setFixedSize(100, 30)
         more_color_btn.setStyleSheet("""
             QPushButton {
                 background: #2a2a2a;
                 color: #ffffff;
                 border: 1px solid #00B0C8;
                 border-radius: 6px;
-                font-size: 12px;
+                font-size: 11px;
                 font-weight: bold;
             }
             QPushButton:hover {
@@ -731,7 +728,10 @@ class CleanDynamicTab(QWidget):
             }
         """)
         more_color_btn.clicked.connect(self._open_color_dialog)
-        basic_colors_layout.addWidget(more_color_btn)
+        basic_colors_grid.addWidget(more_color_btn)
+        
+        basic_colors_grid.addStretch()
+        basic_colors_layout.addLayout(basic_colors_grid)
         
         color_sections_layout.addWidget(basic_colors_frame)
         
