@@ -2,13 +2,125 @@
 RGB Keyboard Lighting Control Window - Clean & Modern Design
 Supports Static (per-zone) and Dynamic (four-zone) modes
 """
-from PyQt5.QtCore import Qt, QPoint, QTimer
-from PyQt5.QtGui import QPainter, QColor, QBrush, QRegion, QPolygon, QPen, QFont
+from PyQt5.QtCore import Qt, QPoint, QTimer, QRect, pyqtSignal
+from PyQt5.QtGui import QPainter, QColor, QBrush, QRegion, QPolygon, QPen, QFont, QLinearGradient, QImage, QPixmap
 from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, 
                           QTabWidget, QSlider, QComboBox, QColorDialog, QGridLayout,
-                          QFrame, QSizePolicy, QSpacerItem)
+                          QFrame, QSizePolicy, QSpacerItem, QDialog, QLineEdit, QSpinBox)
 from app.core import CoreController
 from config import DEFAULT_FONT_FAMILY
+
+class ColorSVPicker(QWidget):
+    """Saturation/Value color picker widget"""
+    colorChanged = pyqtSignal(float, float)
+    
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.hue = 0.0
+        self.saturation = 1.0
+        self.value = 1.0
+        self.setMouseTracking(True)
+    
+    def set_hue(self, hue):
+        self.hue = hue
+        self.update()
+    
+    def set_color(self, s, v):
+        self.saturation = s
+        self.value = v
+        self.update()
+    
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.Antialiasing)
+        
+        # Draw SV gradient
+        for y in range(self.height()):
+            for x in range(self.width()):
+                s = x / self.width()
+                v = 1.0 - (y / self.height())
+                
+                color = QColor()
+                color.setHsvF(self.hue, s, v)
+                painter.setPen(color)
+                painter.drawPoint(x, y)
+        
+        # Draw cursor
+        cursor_x = int(self.saturation * self.width())
+        cursor_y = int((1.0 - self.value) * self.height())
+        
+        painter.setPen(QPen(QColor("#000000"), 3))
+        painter.setBrush(Qt.NoBrush)
+        painter.drawEllipse(cursor_x - 6, cursor_y - 6, 12, 12)
+        
+        painter.setPen(QPen(QColor("#ffffff"), 2))
+        painter.drawEllipse(cursor_x - 6, cursor_y - 6, 12, 12)
+    
+    def mousePressEvent(self, event):
+        self._update_from_mouse(event.pos())
+    
+    def mouseMoveEvent(self, event):
+        if event.buttons() & Qt.LeftButton:
+            self._update_from_mouse(event.pos())
+    
+    def _update_from_mouse(self, pos):
+        self.saturation = max(0.0, min(1.0, pos.x() / self.width()))
+        self.value = max(0.0, min(1.0, 1.0 - (pos.y() / self.height())))
+        self.update()
+        self.colorChanged.emit(self.saturation, self.value)
+
+
+class HueSlider(QWidget):
+    """Vertical hue slider widget"""
+    hueChanged = pyqtSignal(float)
+    
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.hue = 0.0
+        self.setMouseTracking(True)
+    
+    def set_hue(self, hue):
+        self.hue = hue
+        self.update()
+    
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.Antialiasing)
+        
+        # Draw hue gradient
+        for y in range(self.height()):
+            hue = y / self.height()
+            color = QColor()
+            color.setHsvF(hue, 1.0, 1.0)
+            
+            painter.setPen(color)
+            painter.drawLine(0, y, self.width(), y)
+        
+        # Draw cursor
+        cursor_y = int(self.hue * self.height())
+        
+        # Draw triangle cursor
+        points = [
+            QPoint(0, cursor_y),
+            QPoint(15, cursor_y - 8),
+            QPoint(15, cursor_y + 8)
+        ]
+        
+        painter.setPen(QPen(QColor("#000000"), 2))
+        painter.setBrush(QBrush(QColor("#ffffff")))
+        painter.drawPolygon(QPolygon(points))
+    
+    def mousePressEvent(self, event):
+        self._update_from_mouse(event.pos())
+    
+    def mouseMoveEvent(self, event):
+        if event.buttons() & Qt.LeftButton:
+            self._update_from_mouse(event.pos())
+    
+    def _update_from_mouse(self, pos):
+        self.hue = max(0.0, min(1.0, pos.y() / self.height()))
+        self.update()
+        self.hueChanged.emit(self.hue)
 
 
 class SimpleColorButton(QPushButton):
