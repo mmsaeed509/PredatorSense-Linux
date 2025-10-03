@@ -443,211 +443,53 @@ class PredatorStaticTab(QWidget):
             
             if success:
                 print(f"Applied PredatorSense static lighting: zones={hex_colors}, brightness={self._brightness}")
+                
+                # Save settings for next time
+                self.controller.settings.set_static_settings(
+                    hex_colors[0], hex_colors[1], hex_colors[2], hex_colors[3],
+                    self._brightness
+                )
             
         except Exception as e:
             print(f"Error applying lighting: {e}")
 
 
 class CleanDynamicTab(QWidget):
-    """Clean, simple dynamic lighting control"""
+    """PredatorSense-style dynamic lighting control"""
     
     def __init__(self, controller: CoreController, parent=None):
         super().__init__(parent)
         self.controller = controller
-        self._current_color = "#4287f5"
-        self._current_effect = 1  # Breathing
-        self._speed = 4
-        self._brightness = 100
+        
+        # Load saved settings
+        saved_settings = self.controller.settings.get_dynamic_settings()
+        self._current_color = saved_settings.get('color', '#00ffff')
+        self._current_effect = saved_settings.get('effect', 4)
+        self._speed = saved_settings.get('speed', 5)
+        self._brightness = saved_settings.get('brightness', 100)
+        self._direction = saved_settings.get('direction', 2)  # 2 = left to right (default)
+        
         self._setup_ui()
     
     def _setup_ui(self):
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(40, 30, 40, 30)
-        layout.setSpacing(30)
+        layout.setContentsMargins(20, 20, 20, 20)
+        layout.setSpacing(15)
         
-        # Effect selection
-        effect_section = QFrame()
-        effect_section.setStyleSheet("QFrame { background: transparent; }")
-        effect_layout = QVBoxLayout(effect_section)
-        effect_layout.setSpacing(20)
+        # Brightness control at top (like Static tab)
+        brightness_section = QHBoxLayout()
+        brightness_section.addStretch()
         
-        effect_title = QLabel("Choose Effect")
-        effect_title.setFont(QFont(DEFAULT_FONT_FAMILY, 16, QFont.Bold))
-        effect_title.setStyleSheet("color: #ffffff;")
-        effect_title.setAlignment(Qt.AlignCenter)
-        effect_layout.addWidget(effect_title)
-        
-        # Effect buttons grid
-        effects_grid = QGridLayout()
-        effects_grid.setSpacing(12)
-        
-        effects = [
-            (1, "💨 Breathing", "#4287f5"),
-            (2, "💡 Neon", "#00ff00"),
-            (3, "🌊 Wave", "#00ffff"),
-            (4, "🌈 Shifting", "#ff8000"),
-            (6, "☄️ Meteor", "#ff0000"),
-            (7, "✨ Twinkling", "#ffffff")
-        ]
-        
-        self._effect_buttons = {}
-        for i, (mode_id, name, color) in enumerate(effects):
-            row = i // 3
-            col = i % 3
-            
-            btn = QPushButton(name)
-            btn.setFixedSize(140, 50)
-            btn.setCheckable(True)
-            btn.setStyleSheet(self._effect_button_style(color))
-            btn.clicked.connect(lambda checked, m=mode_id, c=color: self._select_effect(m, c))
-            
-            effects_grid.addWidget(btn, row, col)
-            self._effect_buttons[mode_id] = btn
-        
-        # Set default selection
-        self._effect_buttons[1].setChecked(True)
-        
-        effects_container = QWidget()
-        effects_container.setLayout(effects_grid)
-        effect_layout.addWidget(effects_container, 0, Qt.AlignCenter)
-        
-        layout.addWidget(effect_section)
-        
-        # Color selection
-        color_section = QFrame()
-        color_section.setStyleSheet("QFrame { background: transparent; }")
-        color_layout = QVBoxLayout(color_section)
-        color_layout.setSpacing(20)
-        
-        color_title = QLabel("Effect Color")
-        color_title.setFont(QFont(DEFAULT_FONT_FAMILY, 14, QFont.Bold))
-        color_title.setStyleSheet("color: #cfcfcf;")
-        color_title.setAlignment(Qt.AlignCenter)
-        color_layout.addWidget(color_title)
-        
-        # Color picker
-        color_picker_layout = QHBoxLayout()
-        color_picker_layout.addStretch()
-        self._color_btn = SimpleColorButton(self._current_color, 60)
-        self._color_btn.clicked.connect(self._color_changed)
-        color_picker_layout.addWidget(self._color_btn)
-        color_picker_layout.addStretch()
-        color_layout.addLayout(color_picker_layout)
-        
-        layout.addWidget(color_section)
-        
-        # Speed and brightness controls
-        controls_section = QFrame()
-        controls_section.setStyleSheet("QFrame { background: transparent; }")
-        controls_layout = QVBoxLayout(controls_section)
-        controls_layout.setSpacing(25)
-        
-        # Speed control
-        speed_layout = QVBoxLayout()
-        speed_layout.setSpacing(10)
-        
-        speed_title = QLabel("Effect Speed")
-        speed_title.setFont(QFont(DEFAULT_FONT_FAMILY, 14, QFont.Bold))
-        speed_title.setStyleSheet("color: #cfcfcf;")
-        speed_title.setAlignment(Qt.AlignCenter)
-        speed_layout.addWidget(speed_title)
-        
-        speed_slider_layout = QHBoxLayout()
-        speed_slider_layout.setSpacing(15)
-        
-        slow_label = QLabel("Slow")
-        slow_label.setStyleSheet("color: #888888; font-size: 12px;")
-        speed_slider_layout.addWidget(slow_label)
-        
-        self._speed_slider = QSlider(Qt.Horizontal)
-        self._speed_slider.setRange(1, 9)
-        self._speed_slider.setValue(self._speed)
-        self._speed_slider.setStyleSheet(self._clean_slider_style())
-        self._speed_slider.valueChanged.connect(self._speed_changed)
-        speed_slider_layout.addWidget(self._speed_slider)
-        
-        fast_label = QLabel("Fast")
-        fast_label.setStyleSheet("color: #ffffff; font-size: 12px;")
-        speed_slider_layout.addWidget(fast_label)
-        
-        self._speed_value = QLabel(f"{self._speed}")
-        self._speed_value.setStyleSheet("color: #00B0C8; font-weight: bold; font-size: 14px; min-width: 30px;")
-        self._speed_value.setAlignment(Qt.AlignCenter)
-        speed_slider_layout.addWidget(self._speed_value)
-        
-        speed_layout.addLayout(speed_slider_layout)
-        controls_layout.addLayout(speed_layout)
-        
-        # Brightness control
-        brightness_layout = QVBoxLayout()
-        brightness_layout.setSpacing(10)
-        
-        brightness_title = QLabel("Brightness")
-        brightness_title.setFont(QFont(DEFAULT_FONT_FAMILY, 14, QFont.Bold))
-        brightness_title.setStyleSheet("color: #cfcfcf;")
-        brightness_title.setAlignment(Qt.AlignCenter)
-        brightness_layout.addWidget(brightness_title)
-        
-        brightness_slider_layout = QHBoxLayout()
-        brightness_slider_layout.setSpacing(15)
-        
-        dim_label = QLabel("Dim")
-        dim_label.setStyleSheet("color: #888888; font-size: 12px;")
-        brightness_slider_layout.addWidget(dim_label)
+        brightness_label = QLabel("Brightness:")
+        brightness_label.setFont(QFont(DEFAULT_FONT_FAMILY, 12, QFont.Bold))
+        brightness_label.setStyleSheet("color: #00B0C8;")
+        brightness_section.addWidget(brightness_label)
         
         self._brightness_slider = QSlider(Qt.Horizontal)
-        self._brightness_slider.setRange(10, 100)
+        self._brightness_slider.setRange(0, 100)
         self._brightness_slider.setValue(self._brightness)
-        self._brightness_slider.setStyleSheet(self._clean_slider_style())
-        self._brightness_slider.valueChanged.connect(self._brightness_changed)
-        brightness_slider_layout.addWidget(self._brightness_slider)
-        
-        bright_label = QLabel("Bright")
-        bright_label.setStyleSheet("color: #ffffff; font-size: 12px;")
-        brightness_slider_layout.addWidget(bright_label)
-        
-        self._brightness_value = QLabel(f"{self._brightness}%")
-        self._brightness_value.setStyleSheet("color: #00B0C8; font-weight: bold; font-size: 14px; min-width: 50px;")
-        self._brightness_value.setAlignment(Qt.AlignCenter)
-        brightness_slider_layout.addWidget(self._brightness_value)
-        
-        brightness_layout.addLayout(brightness_slider_layout)
-        controls_layout.addLayout(brightness_layout)
-        
-        layout.addWidget(controls_section)
-        
-        # Apply button
-        apply_btn = QPushButton("🎆 Apply Effect")
-        apply_btn.setStyleSheet(self._apply_button_style())
-        apply_btn.clicked.connect(self._apply_effect)
-        layout.addWidget(apply_btn)
-        
-        layout.addStretch()
-    
-    def _effect_button_style(self, color):
-        return f"""
-            QPushButton {{
-                background: #2a2a2a;
-                color: #ffffff;
-                border: 2px solid #404040;
-                border-radius: 10px;
-                font-size: 13px;
-                font-weight: bold;
-            }}
-            QPushButton:hover {{
-                background: #3a3a3a;
-                border-color: {color};
-            }}
-            QPushButton:checked {{
-                background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
-                    stop:0 {color}40, stop:1 {color}20);
-                border-color: {color};
-                color: #ffffff;
-            }}
-        """
-    
-    def _clean_slider_style(self):
-        return """
+        self._brightness_slider.setFixedWidth(200)
+        self._brightness_slider.setStyleSheet("""
             QSlider::groove:horizontal {
                 height: 8px;
                 background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
@@ -664,30 +506,306 @@ class CleanDynamicTab(QWidget):
             QSlider::handle:horizontal:hover {
                 background: #00B0C8;
             }
-        """
+            QSlider::sub-page:horizontal {
+                background: #00B0C8;
+                border-radius: 4px;
+            }
+        """)
+        self._brightness_slider.valueChanged.connect(self._brightness_changed)
+        brightness_section.addWidget(self._brightness_slider)
+        
+        self._brightness_value = QLabel(f"{self._brightness}%")
+        self._brightness_value.setStyleSheet("color: #00B0C8; font-weight: bold; font-size: 14px; min-width: 50px;")
+        self._brightness_value.setAlignment(Qt.AlignCenter)
+        brightness_section.addWidget(self._brightness_value)
+        
+        layout.addLayout(brightness_section)
+        
+        # Main content layout
+        content_layout = QVBoxLayout()
+        content_layout.setSpacing(20)
+        
+        # Light Effects section
+        effects_frame = QFrame()
+        effects_frame.setStyleSheet("""
+            QFrame {
+                background: #1a1a1a;
+                border: 1px solid #00B0C8;
+                border-radius: 8px;
+            }
+        """)
+        effects_layout = QVBoxLayout(effects_frame)
+        effects_layout.setContentsMargins(15, 15, 15, 15)
+        effects_layout.setSpacing(10)
+        
+        effects_title = QLabel("Light Effects")
+        effects_title.setFont(QFont(DEFAULT_FONT_FAMILY, 13, QFont.Bold))
+        effects_title.setStyleSheet("color: #00B0C8;")
+        effects_layout.addWidget(effects_title)
+        
+        # Effect buttons in 2 columns
+        effects_grid = QGridLayout()
+        effects_grid.setSpacing(8)
+        
+        effects = [
+            (1, "Breathing"),
+            (4, "Shifting"),
+            (3, "Wave"),
+            (2, "Neon"),
+            (5, "Zoom"),
+        ]
+        
+        self._effect_buttons = {}
+        for i, (mode_id, name) in enumerate(effects):
+            row = i // 3
+            col = i % 3
+            
+            btn = QPushButton(name)
+            btn.setFixedSize(120, 35)
+            btn.setCheckable(True)
+            btn.setStyleSheet(self._effect_button_style())
+            btn.clicked.connect(lambda checked, m=mode_id: self._select_effect(m))
+            
+            effects_grid.addWidget(btn, row, col)
+            self._effect_buttons[mode_id] = btn
+        
+        # Set saved/default selection
+        if self._current_effect in self._effect_buttons:
+            self._effect_buttons[self._current_effect].setChecked(True)
+        else:
+            self._effect_buttons[4].setChecked(True)  # Fallback to Shifting
+        
+        effects_layout.addLayout(effects_grid)
+        content_layout.addWidget(effects_frame)
+        
+        # Speed and Direction row
+        controls_row = QHBoxLayout()
+        controls_row.setSpacing(15)
+        
+        # Speed section
+        speed_frame = QFrame()
+        speed_frame.setStyleSheet("""
+            QFrame {
+                background: #1a1a1a;
+                border: 1px solid #00B0C8;
+                border-radius: 8px;
+            }
+        """)
+        speed_layout = QVBoxLayout(speed_frame)
+        speed_layout.setContentsMargins(15, 10, 15, 10)
+        speed_layout.setSpacing(8)
+        
+        speed_title = QLabel("Speed")
+        speed_title.setFont(QFont(DEFAULT_FONT_FAMILY, 12, QFont.Bold))
+        speed_title.setStyleSheet("color: #00B0C8;")
+        speed_layout.addWidget(speed_title)
+        
+        self._speed_slider = QSlider(Qt.Horizontal)
+        self._speed_slider.setRange(1, 9)
+        self._speed_slider.setValue(self._speed)
+        self._speed_slider.setStyleSheet(self._slider_style())
+        self._speed_slider.valueChanged.connect(self._speed_changed)
+        speed_layout.addWidget(self._speed_slider)
+        
+        controls_row.addWidget(speed_frame, 1)
+        
+        # Direction section
+        direction_frame = QFrame()
+        direction_frame.setStyleSheet("""
+            QFrame {
+                background: #1a1a1a;
+                border: 1px solid #00B0C8;
+                border-radius: 8px;
+            }
+        """)
+        direction_layout = QVBoxLayout(direction_frame)
+        direction_layout.setContentsMargins(15, 10, 15, 10)
+        direction_layout.setSpacing(8)
+        
+        direction_title = QLabel("Direction")
+        direction_title.setFont(QFont(DEFAULT_FONT_FAMILY, 12, QFont.Bold))
+        direction_title.setStyleSheet("color: #00B0C8;")
+        direction_layout.addWidget(direction_title)
+        
+        # Direction buttons
+        direction_buttons_layout = QHBoxLayout()
+        direction_buttons_layout.setSpacing(10)
+        
+        self._left_btn = QPushButton("←")
+        self._left_btn.setFixedSize(50, 30)
+        self._left_btn.setCheckable(True)
+        self._left_btn.setStyleSheet(self._direction_button_style())
+        self._left_btn.clicked.connect(lambda checked: self._set_direction(1) if checked else None)  # 1 = right to left
+        
+        self._right_btn = QPushButton("→")
+        self._right_btn.setFixedSize(50, 30)
+        self._right_btn.setCheckable(True)
+        self._right_btn.setStyleSheet(self._direction_button_style())
+        self._right_btn.clicked.connect(lambda checked: self._set_direction(2) if checked else None)  # 2 = left to right
+        
+        # Set saved direction
+        if self._direction == 1:  # right to left (←)
+            self._left_btn.setChecked(True)
+        else:  # 2 = left to right (→)
+            self._right_btn.setChecked(True)
+        
+        direction_buttons_layout.addWidget(self._left_btn)
+        direction_buttons_layout.addWidget(self._right_btn)
+        direction_buttons_layout.addStretch()
+        
+        direction_layout.addLayout(direction_buttons_layout)
+        controls_row.addWidget(direction_frame, 1)
+        
+        content_layout.addLayout(controls_row)
+        
+        # Color sections
+        self._color_sections_widget = QWidget()
+        color_sections_layout = QVBoxLayout(self._color_sections_widget)
+        color_sections_layout.setContentsMargins(0, 0, 0, 0)
+        color_sections_layout.setSpacing(15)
+        
+        # Basic colors
+        basic_colors_frame = QFrame()
+        basic_colors_frame.setStyleSheet("""
+            QFrame {
+                background: #1a1a1a;
+                border: 1px solid #00B0C8;
+                border-radius: 8px;
+            }
+        """)
+        basic_colors_layout = QVBoxLayout(basic_colors_frame)
+        basic_colors_layout.setContentsMargins(15, 10, 15, 10)
+        basic_colors_layout.setSpacing(8)
+        
+        basic_title = QLabel("Basic colors")
+        basic_title.setFont(QFont(DEFAULT_FONT_FAMILY, 11, QFont.Bold))
+        basic_title.setStyleSheet("color: #888888;")
+        basic_colors_layout.addWidget(basic_title)
+        
+        # Basic color buttons
+        basic_colors_grid = QHBoxLayout()
+        basic_colors_grid.setSpacing(5)
+        
+        basic_colors = ["#00ffff", "#ff0000", "#ff8000", "#ffff00", "#00ff00", 
+                       "#0000ff", "#ff00ff", "#8000ff", "#ffffff"]
+        
+        self._basic_color_buttons = []
+        for color in basic_colors:
+            btn = QPushButton()
+            btn.setFixedSize(30, 30)
+            btn.setStyleSheet(f"""
+                QPushButton {{
+                    background: {color};
+                    border: 2px solid #404040;
+                    border-radius: 4px;
+                }}
+                QPushButton:hover {{
+                    border-color: #00B0C8;
+                }}
+            """)
+            btn.clicked.connect(lambda checked, c=color: self._select_color(c))
+            basic_colors_grid.addWidget(btn)
+            self._basic_color_buttons.append(btn)
+        
+        basic_colors_grid.addStretch()
+        basic_colors_layout.addLayout(basic_colors_grid)
+        color_sections_layout.addWidget(basic_colors_frame)
+        
+        # More color button
+        more_color_btn = QPushButton("     More color...")
+        more_color_btn.setFixedHeight(35)
+        more_color_btn.setStyleSheet("""
+            QPushButton {
+                background: #2a2a2a;
+                color: #ffffff;
+                border: 1px solid #00B0C8;
+                border-radius: 6px;
+                font-size: 12px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background: #3a3a3a;
+                border-color: #00d4e8;
+            }
+        """)
+        more_color_btn.clicked.connect(self._open_color_dialog)
+        color_sections_layout.addWidget(more_color_btn)
+        
+        content_layout.addWidget(self._color_sections_widget)
+        content_layout.addStretch()
+        
+        layout.addLayout(content_layout)
+        
+        # Update color sections visibility based on current effect
+        self._update_color_sections_visibility()
     
-    def _apply_button_style(self):
+    def _effect_button_style(self):
         return """
             QPushButton {
-                background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
-                    stop:0 #00B0C8, stop:1 #00d4e8);
+                background: #2a2a2a;
+                color: #888888;
+                border: 1px solid #404040;
+                border-radius: 6px;
+                font-size: 12px;
+            }
+            QPushButton:hover {
+                background: #3a3a3a;
+                color: #ffffff;
+            }
+            QPushButton:checked {
+                background: #00B0C8;
                 color: #000000;
-                border: none;
-                border-radius: 12px;
-                padding: 15px 30px;
+                border-color: #00B0C8;
                 font-weight: bold;
+            }
+        """
+    
+    def _direction_button_style(self):
+        return """
+            QPushButton {
+                background: #2a2a2a;
+                color: #888888;
+                border: 1px solid #404040;
+                border-radius: 4px;
                 font-size: 16px;
             }
             QPushButton:hover {
-                background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
-                    stop:0 #00d4e8, stop:1 #00f0ff);
+                background: #3a3a3a;
+                color: #ffffff;
+                border-color: #00B0C8;
             }
-            QPushButton:pressed {
-                background: #008a9c;
+            QPushButton:checked {
+                background: #00B0C8;
+                color: #000000;
+                border-color: #00B0C8;
             }
         """
     
-    def _select_effect(self, mode_id, color):
+    def _slider_style(self):
+        return """
+            QSlider::groove:horizontal {
+                height: 6px;
+                background: #333333;
+                border-radius: 3px;
+            }
+            QSlider::handle:horizontal {
+                background: #00B0C8;
+                border: 2px solid #00B0C8;
+                width: 16px;
+                margin: -5px 0;
+                border-radius: 8px;
+            }
+            QSlider::handle:horizontal:hover {
+                background: #00d4e8;
+                border-color: #00d4e8;
+            }
+            QSlider::sub-page:horizontal {
+                background: #00B0C8;
+                border-radius: 3px;
+            }
+        """
+    
+    def _select_effect(self, mode_id):
         # Uncheck other buttons
         for btn in self._effect_buttons.values():
             btn.setChecked(False)
@@ -696,20 +814,59 @@ class CleanDynamicTab(QWidget):
         self._effect_buttons[mode_id].setChecked(True)
         self._current_effect = mode_id
         
-        # Update color to match effect
-        self._current_color = color
-        self._color_btn.set_color(color)
+        # Update color sections visibility
+        self._update_color_sections_visibility()
+        
+        # Auto-apply effect
+        self._apply_effect()
     
-    def _color_changed(self):
-        self._current_color = self._color_btn.get_color()
+    def _update_color_sections_visibility(self):
+        """Hide color sections for Wave and Neon effects"""
+        # Wave=3, Neon=2 don't use colors
+        if self._current_effect in [2, 3]:
+            self._color_sections_widget.setVisible(False)
+        else:
+            self._color_sections_widget.setVisible(True)
+    
+    def _select_color(self, color):
+        self._current_color = color
+        # Auto-apply
+        self._apply_effect()
+    
+    def _open_color_dialog(self):
+        color = QColorDialog.getColor(QColor(self._current_color), self, "Choose Color")
+        if color.isValid():
+            self._select_color(color.name())
+    
+    def _set_direction(self, direction):
+        self._direction = direction
+        # Block signals to prevent recursive calls
+        self._left_btn.blockSignals(True)
+        self._right_btn.blockSignals(True)
+        # Uncheck both
+        self._left_btn.setChecked(False)
+        self._right_btn.setChecked(False)
+        # Check selected (1 = right to left, 2 = left to right)
+        if direction == 1:  # right to left (←)
+            self._left_btn.setChecked(True)
+        else:  # 2 = left to right (→)
+            self._right_btn.setChecked(True)
+        # Unblock signals
+        self._left_btn.blockSignals(False)
+        self._right_btn.blockSignals(False)
+        # Auto-apply
+        self._apply_effect()
     
     def _speed_changed(self, value):
         self._speed = value
-        self._speed_value.setText(str(value))
+        # Auto-apply
+        self._apply_effect()
     
     def _brightness_changed(self, value):
         self._brightness = value
         self._brightness_value.setText(f"{value}%")
+        # Auto-apply
+        self._apply_effect()
     
     def _apply_effect(self):
         """Apply the selected dynamic effect"""
@@ -724,14 +881,19 @@ class CleanDynamicTab(QWidget):
             b = int(color[4:6], 16)
             
             success = self.controller.lighting_service.set_four_zone_mode(
-                self._current_effect, self._speed, self._brightness, 1, r, g, b
+                self._current_effect, self._speed, self._brightness, 
+                self._direction, r, g, b
             )
             
             if success:
                 print(f"Applied dynamic effect: mode={self._current_effect}, speed={self._speed}, "
-                      f"brightness={self._brightness}, rgb=({r},{g},{b})")
-            else:
-                print("Failed to apply dynamic effect")
+                      f"brightness={self._brightness}, direction={self._direction}, rgb=({r},{g},{b})")
+                
+                # Save settings for next time
+                self.controller.settings.set_dynamic_settings(
+                    self._current_effect, self._speed, self._brightness,
+                    self._direction, self._current_color
+                )
                 
         except Exception as e:
             print(f"Error applying dynamic effect: {e}")

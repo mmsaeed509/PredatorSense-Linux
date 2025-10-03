@@ -4,6 +4,7 @@ from .metrics_service import MetricsService
 from .fan_service import FanService
 from .battery_service import BatteryService
 from .lighting_service import LightingService
+from .settings_manager import SettingsManager
 
 
 class CoreController(QObject):
@@ -24,6 +25,7 @@ class CoreController(QObject):
         self.fans = FanService(self)
         self.battery = BatteryService(self)
         self.lighting_service = LightingService()
+        self.settings = SettingsManager()
 
     # Lifecycle
     def start(self):

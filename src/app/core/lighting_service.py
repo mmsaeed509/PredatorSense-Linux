@@ -98,17 +98,22 @@ class LightingService(QObject):
             self.lightingChanged.emit()
             return True
         
-        # Fallback to direct sysfs write
+        # Fallback to direct sysfs write (no sudo needed if permissions are set)
         path = _rgb_attr_path("per_zone_mode")
         
-        value = f"{zone1},{zone2},{zone3},{zone4},{brightness}"
-        success = _run_cmd(["bash", "-lc", f"echo {value} | sudo tee {path}"])
-        
-        if success:
+        try:
+            value = f"{zone1},{zone2},{zone3},{zone4},{brightness}"
+            with open(path, 'w') as f:
+                f.write(value)
             self._current_mode = "static"
             self.lightingChanged.emit()
-        
-        return success
+            return True
+        except PermissionError:
+            print(f"Permission denied writing to {path}. Please configure udev rules.")
+            return False
+        except Exception as e:
+            print(f"Error writing to {path}: {e}")
+            return False
     
     def set_all_zones_color(self, color: str, brightness: int = 100) -> bool:
         """Set all zones to the same color"""
@@ -150,17 +155,22 @@ class LightingService(QObject):
             self.lightingChanged.emit()
             return True
         
-        # Fallback to direct sysfs write
+        # Fallback to direct sysfs write (no sudo needed if permissions are set)
         path = _rgb_attr_path("four_zone_mode")
         
-        value = f"{mode},{speed},{brightness},{direction},{red},{green},{blue}"
-        success = _run_cmd(["bash", "-lc", f"echo {value} | sudo tee {path}"])
-        
-        if success:
+        try:
+            value = f"{mode},{speed},{brightness},{direction},{red},{green},{blue}"
+            with open(path, 'w') as f:
+                f.write(value)
             self._current_mode = "dynamic"
             self.lightingChanged.emit()
-        
-        return success
+            return True
+        except PermissionError:
+            print(f"Permission denied writing to {path}. Please configure udev rules.")
+            return False
+        except Exception as e:
+            print(f"Error writing to {path}: {e}")
+            return False
     
     # Convenience methods for common effects
     def set_breathing_effect(self, red: int, green: int, blue: int, speed: int = 4, 
