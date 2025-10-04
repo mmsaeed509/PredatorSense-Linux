@@ -395,6 +395,9 @@ class CustomShapeWindow(QMainWindow):
             # Wire FanService RPM -> UI
             try:
                 self.controller.fans.rpmUpdated.connect(self.fan_window.setRpm)
+                # Set initial RPM values from fan service
+                cpu_rpm, gpu_rpm = self.controller.fans._last_rpm_values
+                self.fan_window.setRpm(cpu_rpm, gpu_rpm)
             except Exception:
                 pass
 

@@ -169,7 +169,7 @@ class FanControlWindow(QWidget):
         cpu_column = QVBoxLayout()
         cpu_column.setAlignment(Qt.AlignCenter)
         
-        self.cpu_dial = FanDial("CPU", 0)  # Start with some RPM for immediate spinning
+        self.cpu_dial = FanDial("CPU", 1200)  # Start with reasonable default RPM
         self.cpu_dial.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         cpu_column.addWidget(self.cpu_dial)
         
@@ -203,7 +203,7 @@ class FanControlWindow(QWidget):
         gpu_column = QVBoxLayout()
         gpu_column.setAlignment(Qt.AlignCenter)
         
-        self.gpu_dial = FanDial("GPU", 0)  # Start with some RPM for immediate spinning
+        self.gpu_dial = FanDial("GPU", 1000)  # Start with reasonable default RPM
         self.gpu_dial.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         gpu_column.addWidget(self.gpu_dial)
         
